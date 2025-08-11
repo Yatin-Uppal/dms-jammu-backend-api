@@ -1,0 +1,70 @@
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS `sp_dms_dashboard_data`$$
+
+CREATE PROCEDURE `sp_dms_dashboard_data`(IN start_date_param DATETIME, IN fmn_id INT)
+BEGIN
+DECLARE var_where_condition TEXT;
+SET @start_date_param = start_date_param;
+SET @end_date_param = DATE_ADD(start_date_param, INTERVAL 52 HOUR);
+SET @fmn_id = fmn_id;
+
+IF fmn_id = 0 THEN
+        SET var_where_condition = CONCAT('created_at >= @start_date_param AND created_at < @end_date_param');
+ELSE
+	SET var_where_condition = CONCAT('created_at >= @start_date_param AND created_at < @end_date_param AND fmn_id = @fmn_id');
+END IF;
+ 
+SET @sql = CONCAT("
+	    SELECT 
+		b.id, b.record_id, b.vehicle_number_ba_number,a.*
+	    FROM driver_vehicle_details b
+            LEFT JOIN 
+            (SELECT
+            	id as inner_id,
+		record_id as inner_record_id,
+		vehicle_number_ba_number as inner_vehicle_number_ba_number,
+		MAX(CASE WHEN (created_at >= @start_date_param AND created_at < DATE_ADD(@start_date_param, INTERVAL 2 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+4 - M+6',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 2 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 4 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+6 - M+8',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 4 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 6 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+8 - M+10',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 6 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 8 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+10 - M+12',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 8 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 10 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+12 - M+14',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 10 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 12 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+14 - M+16',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 12 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 14 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+16 - M+18',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 14 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 16 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+18 - M+20',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 16 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 18 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+20 - M+22',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 18 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 20 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+22 - M+24',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 20 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 22 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+24 - M+26',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 22 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 24 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+26 - M+28',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 24 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 26 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+28 - M+30',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 26 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 28 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+30 - M+32',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 28 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 30 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+32 - M+34',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 30 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 32 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+34 - M+36',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 32 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 34 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+36 - M+38',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 34 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 36 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+38 - M+40',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 36 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 38 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+40 - M+42',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 38 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 40 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+42 - M+44',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 40 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 42 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+44 - M+46',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 42 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 44 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+46 - M+48',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 44 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 46 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+48 - M+50',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 46 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 48 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+50 - M+52',
+		MAX(CASE WHEN (created_at >= DATE_ADD(@start_date_param, INTERVAL 48 HOUR) AND created_at < DATE_ADD(@start_date_param, INTERVAL 50 HOUR)) THEN CASE WHEN (SELECT IFNULL(`end`,'2') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '2' THEN 'Green' WHEN (SELECT IFNULL(`begin`,'1') FROM driver_vehicle_details WHERE record_id =  a.record_id) != '1' THEN 'Blue' ELSE 'No Activity' END ELSE NULL END) AS 'M+52 - M+54'
+		FROM driver_vehicle_details a
+		WHERE ", var_where_condition, "
+		GROUP BY id,record_id, vehicle_number_ba_number
+	    ) a
+	    ON b.record_id = a.inner_record_id
+	    WHERE b.created_at >= '", start_date_param ,"' AND b.created_at < '",DATE_ADD(start_date_param, INTERVAL 52 HOUR),
+	    "' ORDER BY b.id;
+		");
+		
+    -- Execute the dynamic SQL query
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    
+    -- Deallocate the prepared statement
+    DEALLOCATE PREPARE stmt;
+
+END$$
+
+DELIMITER ;

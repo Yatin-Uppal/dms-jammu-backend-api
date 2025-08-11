@@ -1,0 +1,85 @@
+"use strict";
+
+/** @type {import('sequelize-cli').Migration} */
+module.exports = {
+  async up(queryInterface, Sequelize) {
+    /**
+     * Add altering commands here.
+     *
+     * Example:
+     * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
+     */
+
+    const createProcedureSQL = `
+
+
+    CREATE PROCEDURE sp_amk_report(IN start_date_param varchar(100), IN end_date_param varchar(100), IN fmn_id_param INT)
+    BEGIN
+    
+    DECLARE var_where_condition TEXT default '';
+    SET @start_date_param = start_date_param;
+    SET @end_date_param = end_date_param;
+    SET @fmn_id_param = fmn_id_param;
+    
+    IF start_date_param != ''
+    THEN
+      IF fmn_id_param = 0 THEN
+          SET var_where_condition = CONCAT('and a.deleted_at IS NULL and a.begin between @start_date_param AND @end_date_param');
+      ELSE
+        SET var_where_condition = CONCAT('and a.deleted_at IS NULL and a.begin between @start_date_param AND @end_date_param AND a.fmn_id = @fmn_id_param');
+      END IF;
+    END IF;
+    
+    IF start_date_param = '' and fmn_id_param != 0
+    THEN 
+      SET var_where_condition = CONCAT(' and a.fmn_id = @fmn_id_param');
+    END IF; 
+    set @sql = concat("select 
+      f.amk_number as 'AMK NUMBER', 
+        f.nomenclature as 'NOMENCLATURE',
+        f.qty AS 'QUANTITY',
+      a.unit AS 'UNIT', 
+      round(((f.qty * f.package_weight)/f.ipq)/1000, 2) as 'TONNAGE',
+      g.formation_name as 'FORMATION'
+    from driver_vehicle_details a
+    join assigned_lts_issue_voucher_details b on a.id = b.driver_vehicle_detail_id 
+     ", var_where_condition ,
+    " join lts_issue_voucher_details c on b.lts_issue_voucher_detail_id = c.id
+    join skt_details d on c.id = d.lts_issue_voucher_detail_id
+    join skt_varieties e on d.id = e.skt_id
+    join variety_details f on f.id = e.variety_id
+    join formations g on a.fmn_id = g.id
+    group by
+    a.unit, a.fmn_id, f.amk_number, f.qty, f.nomenclature, f.number_of_package, f.package_weight, f.ipq
+    ORDER BY f.amk_number;");
+    
+       -- Execute the dynamic SQL query
+          PREPARE stmt FROM @sql;
+          EXECUTE stmt;
+          
+          -- Deallocate the prepared statement
+          DEALLOCATE PREPARE stmt;
+         
+    END
+        
+        
+        `;
+
+    await queryInterface.sequelize.query(createProcedureSQL);
+  },
+
+  async down(queryInterface, Sequelize) {
+    /**
+     * Add reverting commands here.
+     *
+     * Example:
+     * await queryInterface.dropTable('users');
+     */
+
+    const dropProcedureSQL = `
+    DROP PROCEDURE IF EXISTS \`sp_amk_report\`;
+  `;
+
+    await queryInterface.sequelize.query(dropProcedureSQL);
+  },
+};
