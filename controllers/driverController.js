@@ -581,21 +581,21 @@ exports.downloadExcel = async (req, res) => {
         // Add headers for each variety under SKT
         for (let k = 1; k <= maxVarietiesCount; k++) {
           ltsHeaders.push(
-            `${k} AMK Number`,
-            `${k} Nomenclature`,
-            `${k} IPQ`,
-            `${k} Package Weight`,
-            `${k} Qty Nos.`,
-            `${k} Number of Packages`,
-            `${k} SKT Name`,
-            `${k} FAD Loading Point LP No.`
+            `${k}. AMK Number`,
+            `${k}. Nomenclature`,
+            `${k}. IPQ`,
+            `${k}. Package Weight`,
+            `${k}. Qty Nos.`,
+            `${k}. Number of Packages`,
+            `${k}. SKT Name`,
+            `${k}. FAD Loading Point LP No.`
           );
 
           for (let q = 1; q <= maxQtycount; q++) {
             // Push Quantity and Lot Number headers based on maxQtycount
-            ltsHeaders.push(`${q} Quantity `, `${q} Lot Number`);
+            ltsHeaders.push(`${q}. Quantity `, `${q}. Lot Number`);
           }
-          ltsHeaders.push(`${k} Loaded By`, `${k} Loaded Time`);
+          ltsHeaders.push(`${k}. Loaded By`, `${k}. Loaded Time`);
         }
       }
     }
@@ -633,7 +633,7 @@ exports.downloadExcel = async (req, res) => {
       const ltsVaritiesRow = [];
       record.assignedLtsData.forEach((assignedLts) => {
         ltsVaritiesRow.push(assignedLts.ltsDetail.name || "");
-        ltsVaritiesRow.push(assignedLts.ltsDetail.type || "");
+        ltsVaritiesRow.push((assignedLts.ltsDetail.type === "issue_voucher" ? "Issue Voucher" : "Load Tally Sheet") || "");
         ltsVaritiesRow.push(
           formatDateToYYYYMMDD(assignedLts.ltsDetail.lts_date_and_time) || ""
         );
@@ -837,7 +837,10 @@ exports.downloadExcel = async (req, res) => {
     fileStream.pipe(res);
 
     // Construct the URL to download the Excel file
-    const URL = process.env.BASE_URL || "http://192.168.0.7:8080/";
+    // const URL = process.env.BASE_URL || "http://192.168.0.7:8080/";
+    console.log(getLocalIP());
+    
+    const URL = process.env.BASE_URL || `http://${getLocalIP()}:8080/`;
     const excelFileURL = `${URL}${excelFileName}`; // Adjust the URL as needed
 
     // Schedule the deletion of the file after 1 minute
