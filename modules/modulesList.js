@@ -67,12 +67,12 @@ exports.manage_amk_quantity_api = [
 ]
 
 exports.manage_amk_quantity_import_file_api = [
-  "/api/manage_amk_quantity/import-data"
+  "/api/manage_amk_quantity/import-data-new"
 ]
 
 exports.manage_series = [
-  "api/manage_series/store",
-  "api/manage_series/update",
-  "api/manage_series/series",
-  "api/manage_series/series_batch"
+  "/api/manage_series/store",
+  "/api/manage_series/update",
+  "/api/manage_series/series",
+  "/api/manage_series/series_batch"
 ]

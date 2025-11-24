@@ -13,9 +13,9 @@ async function getAMKQuantityService({
     ...(amk_number && {
       amk_number: { [db.Sequelize.Op.like]: `%${amk_number}%` },
     }),
-    // ...(location_33_fad && {
-    //   location_33_fad: { [db.Sequelize.Op.like]: `%${location_33_fad}%` },
-    // }),
+    ...(location_33_fad && {
+      location_33_fad: { [db.Sequelize.Op.like]: `%${location_33_fad}%` },
+    }),
     ...(store_type && {
       inv_of_store_type: { [db.Sequelize.Op.like]: `%${store_type}%` },
     }),

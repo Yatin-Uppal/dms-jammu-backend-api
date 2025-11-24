@@ -10,6 +10,7 @@ const {
   mobileGateCheckoutModuleAction,
   manageAmkQuantity,
   manageAmkQuantityImportDataAction,
+  manageSeriesAction,
 } = require("../modules/actionData");
 const db = require("../models");
 
@@ -68,6 +69,9 @@ const getLogMessage = async (module_name, http_method, status, req, res) => {
     let ltsData = null;
     if (http_method === "PUT" || http_method === "DELETE") {
       ltsData = await findLtsData(req.params.lts_Id);
+    }
+    if (req?.file) {
+      ltsData = req.file.originalname;
     }
     const ltsAction = ltsModuleAction(username, ltsData);
 
@@ -130,8 +134,7 @@ const getLogMessage = async (module_name, http_method, status, req, res) => {
     const matchingAction = driverAction.find(
       (action) =>
         action.http_method === http_method &&
-        action.status === status &&
-        url.startsWith(action.api_url)
+        action.status === status
     );
     return matchingAction
       ? {
@@ -149,8 +152,7 @@ const getLogMessage = async (module_name, http_method, status, req, res) => {
     const matchingAction = driverAction.find(
       (action) =>
         action.http_method === http_method &&
-        action.status === status &&
-        url.startsWith(action.api_url)
+        action.status === status
     );
     return matchingAction
       ? {
@@ -191,6 +193,20 @@ const getLogMessage = async (module_name, http_method, status, req, res) => {
 
     const manageAmkQuantityAction = manageAmkQuantityImportDataAction(username);
     const matchingAction = manageAmkQuantityAction.find(
+      (action) => action.http_method === http_method && action.status === status
+    );
+    return matchingAction
+      ? {
+          action_performed: matchingAction.action_performed,
+          message: matchingAction.message,
+        }
+      : null;
+  }
+  if (module_name === "Manage Series") {
+    const username = await findUserData(req.headers.user_id);
+
+    const seriesAction = manageSeriesAction(username);
+    const matchingAction = seriesAction.find(
       (action) => action.http_method === http_method && action.status === status
     );
     return matchingAction

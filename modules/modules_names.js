@@ -7,6 +7,7 @@ exports.modules_actual_name = [
   { function_name: "manage_lts_api", module_name: "Manage LTS" },
   { function_name: "manage_users_api", module_name: "Manage Users" },
   { function_name: "manage_vehicle_api", module_name: "Manage Vehicles" },
+  { function_name: "manage_series", module_name: "Manage Series" },
   {
     function_name: "mobile_gate_checkout_api",
     module_name: "Mobile Gate Checkout",

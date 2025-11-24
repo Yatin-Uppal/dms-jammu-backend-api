@@ -6,9 +6,6 @@ const { Op } = require("sequelize");
 const { formatDateToYYYYMMDD } = require("../services/timeFormatServices");
 const {generateBatches} = require("../controllers/manageSeriesControllers")
 
-// Import sequelize connection from your models
-const sequelize = db.sequelize;
-
 // to get the driver list data
 exports.getDashboardListData = async (req, res) => {
   try {
@@ -20,14 +17,14 @@ exports.getDashboardListData = async (req, res) => {
     const seriesData = await db.Series.findOne();//{ where: { userId: user_id } }
 
     if (!seriesData) {
-      responseHandler(req, res, 404, false, "No Series Found", { error }, "");
+      return responseHandler(req, res, 404, false, "No Series Found", {}, "");
     }
 
     const { time, interval, startDate: strDate } = seriesData;
     const batches = generateBatches(strDate, time, interval);
 
     if (!batches?.length) {
-      responseHandler(req, res, 404, false, "No Series Found", { error }, "");
+      return responseHandler(req, res, 404, false, "No Series Found", {}, "");
     }
 
     // Set default values if not provided
@@ -84,9 +81,9 @@ exports.getDashboardListData = async (req, res) => {
     `;
 
     // Execute the dynamic SQL query using Sequelize
-    const results = await sequelize.query(sqlQuery, {
+    const results = await db.sequelize.query(sqlQuery, {
       replacements: { startDate, endDate: formattedEndDate, formationId },
-      type: sequelize.QueryTypes.SELECT,
+      type: db.sequelize.QueryTypes.SELECT,
     });
 
     // console.log(results, 'result')
@@ -131,7 +128,7 @@ exports.getMobileDashboardListData = async (req, res) => {
     const currentDate = await formatDateToYYYYMMDD(new Date());
 
     // Execute the stored procedure using Sequelize
-    const results = await sequelize.query(`CALL sp_mobile_dms_dashboard_data(?, ?)`, {
+    const results = await db.sequelize.query(`CALL sp_mobile_dms_dashboard_data(?, ?)`, {
       replacements: [date_range || currentDate, series],
 
     });

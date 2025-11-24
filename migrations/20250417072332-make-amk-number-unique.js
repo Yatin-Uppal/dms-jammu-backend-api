@@ -5,7 +5,7 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.addConstraint('amk_quantities', {
-      fields: ['amk_number'],
+      fields: ['amk_number','is_deleted'],
       type: 'unique',
       name: 'unique_amk_number'
     });

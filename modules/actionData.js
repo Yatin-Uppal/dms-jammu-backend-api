@@ -31,6 +31,57 @@ exports.loginModuleAction = (username) => [
   },
 ];
 
+exports.manageSeriesAction = (username) => [
+  {
+    http_method: "POST",
+    status: 200,
+    action_performed: `${username} attempted to create a series.`,
+    message: `${username} successfully created a series.`,
+  },
+  {
+    http_method: "POST",
+    status: 400,
+    action_performed: `${username} attempted to create a series.`,
+    message: `${username} provided invalid data for creating a series.`,
+  },
+  {
+    http_method: "POST",
+    status: 500,
+    action_performed: `${username} attempted to create a series.`,
+    message: "An unexpected server error occurred.",
+  },
+  {
+    http_method: "POST",
+    status: 403,
+    action_performed: `${username} attempted to create a series.`,
+    message: "Access Denied. Please contact DCC Admin for assistance.",
+  },
+  {
+    http_method: "PATCH",
+    status: 200,
+    action_performed: `${username} attempted to update a series.`,
+    message: `${username} successfully updated a series.`,
+  },
+  {
+    http_method: "PATCH",
+    status: 400,
+    action_performed: `${username} attempted to update a series.`,
+    message: `${username} provided invalid data for creating a series.`,
+  },
+  {
+    http_method: "PATCH",
+    status: 500,
+    action_performed: `${username} attempted to update a series.`,
+    message: "An unexpected server error occurred.",
+  },
+  {
+    http_method: "PATCH",
+    status: 403,
+    action_performed: `${username} attempted to update a series.`,
+    message: "Access Denied. Please contact DCC Admin for assistance.",
+  },
+];
+
 exports.backupModuleAction = (username) => [
   {
     http_method: "POST",
@@ -122,7 +173,7 @@ exports.formationModuleAction = (username, formationData) => [
 ];
 
 exports.ltsModuleAction = (username, ltsData) => [
-  {
+  ...(ltsData ? [{
     http_method: "POST",
     status: 400,
     action_performed: `${username} attempted to import driver data via an Excel file.`,
@@ -139,7 +190,7 @@ exports.ltsModuleAction = (username, ltsData) => [
     status: 500,
     action_performed: `${username} attempted to import driver data via an Excel file.`,
     message: `${username} encountered a server error.`,
-  },
+  }] : []),
   {
     http_method: "POST",
     status: 400,
