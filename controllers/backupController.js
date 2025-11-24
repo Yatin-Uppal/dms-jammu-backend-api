@@ -1,18 +1,21 @@
 const db = require("../models");
 const responseHandler = require("../helpers/responseHandler");
 const { Op } = require("sequelize");
-const backupService = require("../services/backupService")
+const backupService = require("../services/backupService");
+const { getLocalIP } = require("../helpers/ipHandler");
 const path = require('path');
 const fs = require("fs")
+
 exports.createBackup = async (req, res) => {
     try {
 
+        const ipAddress = getLocalIP();        
         const backupName = await backupService.backupDatabase()
         await db.BackupDetails.create({
             name: backupName,
             backup_date: new Date(),
         });
-        const URL = process.env.BASE_URL || "http://192.168.0.7:8080/";
+        const URL = `http://${ipAddress}:8080/` || process.env.BASE_URL;
         const dumpFile = `${URL}${backupName}`;
         const backupPath = path.join(__dirname, '../public', backupName);
         setTimeout(() => {

@@ -15,7 +15,7 @@ export const excelTojson = (row, storeType) => {
         rowData['is_deleted'] = false
     } else if (storeType === "ammunition") {
         rowData["amk_number"] = row.getCell(1).value || '';
-        rowData["location"] = row.getCell(2).value || '';
+        rowData["location_33_fad"] = row.getCell(4)?.value || '';
         rowData["total_quantity"] = row.getCell(3).value || '';
     }
     return rowData;
@@ -48,7 +48,6 @@ export async function processRecordsInBatches(data, excelFileRecord, db, batchSi
         const transaction = await db.sequelize.transaction();
 
         try {
-            console.log(`Processing batch ${i+1}/${batches.length} (${batch.length} records)...`);
 
             // Process each record in the batch
             const batchResults = await Promise.all(batch.map(async (record) => {
@@ -82,7 +81,6 @@ export async function processRecordsInBatches(data, excelFileRecord, db, batchSi
             await transaction.commit();
             results.push(...batchResults);
 
-            console.log(`Batch ${i+1} completed: ${batchResults.filter(r => r.success).length} successful, ${batchResults.filter(r => !r.success).length} failed`);
         } catch (error) {
             // Rollback transaction if any operation in the batch failed
             await transaction.rollback();
@@ -126,9 +124,9 @@ export const validateExcelData = (jsonData, storeType) => {
             if (!row.amk_number || row.amk_number.toString().trim() === '') {
                 errors.push(`AMK Number is required at row ${rowNumber}`);
             }
-            if (!row.location || row.location.toString().trim() === '') {
-                errors.push(`Location is required at row ${rowNumber}`);
-            }
+            // if (!row.location_33_fad || row.location_33_fad.toString().trim() === '') {
+            //     errors.push(`Location is required at row ${rowNumber}`);
+            // }
             if (!row.total_quantity || row.total_quantity.toString().trim() === '') {
                 errors.push(`Total Quantity is required at row ${rowNumber}`);
             }

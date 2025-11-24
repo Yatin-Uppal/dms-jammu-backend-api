@@ -415,31 +415,26 @@ exports.uploadAMKQuantityNew = async (req, res) => {
 
       try {
         const result = await processRecordsInBatches(data, excelFileRecord, db, 100);
-        console.log(`Processing complete. Successfully processed ${result.successCount}/${result.totalProcessed} records.`);
 
         if (result.errorCount > 0) {
           console.warn(`${result.errorCount} records had errors during processing.`);
         }
 
-        return res.status(201).json({
-            message: 'Data uploaded successfully',
+        const uploadData = {
             totalProcessed: result.totalProcessed,
             successCount: result.successCount,
             data: result.results,
             errorCount: result.errorCount,
-        });
+        };
+        return responseHandler(req, res, 200, true, "", uploadData, "Data uploaded Successfully");
+
       } catch (error) {
         console.error('Failed to process records:', error);
-        throw error;
+        throw new Error("Failed to process records");
       }
 
-      return res.status(200).json({
-        data
-      });
-
     } catch (e) {
-        console.log('check-5', e)
-      return res.status(400).json({ error: e.message })
+      return responseHandler(req, res, 500, false, e, {}, "Server error");
     }
 }
 

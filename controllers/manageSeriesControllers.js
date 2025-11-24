@@ -148,14 +148,11 @@ const generateBatches = (startDate, time, interval) => {
 // controller
 const GetSeriesBatchByUserId = async (req, res, next) => {
   try {
-    const user_id = parseInt(req.header("user_id"));
-
     // Fetch series for the given user
     const seriesData = await db.Series.findOne(); //{ where: { userId: user_id } }
-    const localTime = new Date(seriesData.startDate).toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
 
     if (!seriesData) {
-      return responseHandler(req, res, 200, false, "", [], "");
+      return responseHandler(req, res, 200, false, "First create a series", [], "");
     }
 
     const { time, interval, startDate } = seriesData;

@@ -1,7 +1,6 @@
 const responseHandler = require("../helpers/responseHandler");
 const db = require("../models");
 const { Op } = require("sequelize");
-const sequelize = db.sequelize;
 exports.fetchRecordServices = async (req, res) => {
   let begin = req.query.begin;
   let end = req.query.end;
@@ -214,7 +213,7 @@ exports.fetchAmkListrecords = async (req, res) => {
   let fmn = req.query.fmn_id ? parseInt(req.query.fmn_id) : 0;
 
   try {
-    const results = await sequelize.query(`CALL sp_amk_report(?, ?, ?)`, {
+    const results = await db.sequelize.query(`CALL sp_amk_report(?, ?, ?)`, {
       replacements: [begin, end, fmn],
     });
     // Process the results as needed

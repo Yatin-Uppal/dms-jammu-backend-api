@@ -3,6 +3,7 @@ const app = express();
 const db = require("./models");
 require("dotenv").config();
 const cors = require("cors");
+const { getLocalIP } = require("./helpers/ipHandler");
 //Routes Called
 const authRoutes = require("./routes/authRoutes");
 const vehicleTypeRoutes = require("./routes/vehicleTypeRoutes");
@@ -69,9 +70,13 @@ app.use("/api", checkConnectionRoutes);
 app.use("/api", amkQuantityRoutes);
 app.use("/api", seriesRoutes)
 
-const { ipAddress } = process.env;
-db.sequelize.sync().then(() => {
-  app.listen(PORT, ipAddress, () => {
-    console.log(`Server is running on port ${PORT}`);
-  });
-});
+
+const ipAddress = process.env.SERVER_IP || getLocalIP();
+(async () => {
+  await db.initialize();
+  await db.sequelize.sync();
+
+  app.listen(PORT, ipAddress, () =>
+    console.log(`Server running on http://${ipAddress}:${PORT}`)
+  );
+})();

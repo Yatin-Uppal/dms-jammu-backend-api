@@ -1,8 +1,8 @@
 const db = require("../models");
 
 // take out the latest record id
-const getLatestDriverRecordId = async (record_id_counter) => {
-  const latestRecord = await db.DriverVehicleDetail.findOne({
+const getLatestDriverRecordId = async (record_id_counter, model) => {
+  const latestRecord = await db[model].findOne({
     attributes: [
       [db.sequelize.fn("MAX", db.sequelize.col("record_id")), "max_record_id"],
     ],
@@ -124,23 +124,24 @@ exports.transformData = async (jsonData) => {
           varieties: [],
         };
 
-        let extention = i > 0 ? "_" + i : "";
         let varietyCount = Object.keys(row).filter((key) =>
-          key.match(`AMK No.${extention}$`)
+          key.startsWith(`${i + 1}.AMK No.`)
         ).length;
 
         for (let j = 1; j <= varietyCount; j++) {
+          let extention = "_" + j;
           const varietyDetail = {
-            amk_number: row[`${j}.AMK No.` + extention] || null,
-            nomenclature: row[`${j}.Nomenclature ` + extention] || null,
-            ipq: row[`${j}.IPQ` + extention] || null,
-            package_weight: row[`${j}.Weight` + extention] || null,
-            qty: row[`${j}.Qty Nos.`] || null,
-            number_of_package: row[`${j}.Pkg Nos` + extention] || null,
-            location_33_fad: row[`${j}.Name of SKT` + extention] || null,
+            amk_number: row[`${i + 1}.AMK No.` + extention] || null,
+            nomenclature: row[`${i + 1}.Nomenclature` + extention] || null,
+            ipq: row[`${i + 1}.IPQ` + extention] || null,
+            package_weight: row[`${i + 1}.Weight` + extention] || null,
+            qty: row[`${i + 1}.Qty Nos.` + extention] || null,
+            number_of_package: row[`${i + 1}.Pkg Nos` + extention] || null,
+            location_33_fad: row[`${i + 1}.Name of SKT` + extention] || null,
             fad_loading_point_lp_number:
-              row[`${j}.Loading Point No.` + extention] || null,
+              row[`${i + 1}.Loading Point` + extention] || null,
           };
+
           skt.varieties.push(varietyDetail);
         }
 
@@ -162,7 +163,7 @@ exports.storeBulkDriverData = async (bulkDriverData,userId) => {
     for (const driverData of bulkDriverData) {
       const createdDriver = await db.DriverVehicleDetail.create(
         {
-          record_id: await getLatestDriverRecordId(record_id_counter),
+          record_id: await getLatestDriverRecordId(record_id_counter, "DriverVehicleDetail"),
           vehicle_type_id: driverData.vehicle_type_id || null,
           vehicle_number_ba_number: driverData.vehicle_number_ba_number || null,
           resource: driverData.resource || null,
@@ -176,6 +177,7 @@ exports.storeBulkDriverData = async (bulkDriverData,userId) => {
           series: driverData.series || null,
           fmn_id: driverData.fmn_id || null,
           created_at: driverData.created_at || null,
+          created_by : userId,
         },
         {
           transaction,
@@ -190,7 +192,7 @@ exports.storeBulkDriverData = async (bulkDriverData,userId) => {
             lts_date_and_time: lts.lts_date_and_time || null,
             type: lts.type || null,
             fmn_id: lts.fmn_id || null,
-            created_at: driverData.created_at || null,
+            created_at: driverData.created_at || new Date(),
             created_by : userId
           },
           {
@@ -203,7 +205,6 @@ exports.storeBulkDriverData = async (bulkDriverData,userId) => {
             driver_vehicle_detail_id: createdDriver.id,
             lts_issue_voucher_detail_id: storeLtsData.id,
             assigned_by: userId,
-            
           },
           {
             transaction,
