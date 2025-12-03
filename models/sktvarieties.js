@@ -11,10 +11,10 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      // SktVarieties.hasMany(models.SktDetails, {
-      //   foreignKey: "skt_id",
-      //   as: "sktData",
-      // });
+      SktVarieties.belongsTo(models.SktDetails, {
+        foreignKey: "skt_id",
+        as: "sktData",
+      });
 
       SktVarieties.hasMany(models.VarietyDetail, {
         foreignKey: "id",
@@ -24,6 +24,11 @@ module.exports = (sequelize, DataTypes) => {
       SktVarieties.hasMany(models.VarietyLoadStatusDetail, {
         foreignKey: "skt_variety_id",
         as: "sktvarietyLoadData",
+      });
+
+      SktVarieties.hasMany(models.VarietiesLotDetails, {
+        foreignKey: "skt_variety_id",
+        as: "sktVarietyLotData",
       });
 
     }

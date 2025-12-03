@@ -13,7 +13,6 @@ const driverVehicleRoutes = require("./routes/driverVehicleRoutes");
 const assignedLtsRoutes = require("./routes/assignedLtsRoutes");
 const fetchDetailsRoutes = require("./routes/fetchDetailsRoutes");
 const importDataRoutes = require("./routes/importDataRoute");
-const syncDataRoutes = require("./routes/syncDataRoutes");
 const formationRoutes = require("./routes/formationRoutes");
 const driverVehicleNotLoadedRoutes = require("./routes/syncDriverDataRoutes");
 const gateCheckoutSyncRoutes = require("./routes/gateCheckoutSyncRoutes");
@@ -25,6 +24,7 @@ const checkConnectionRoutes = require("./routes/checkConnectionRoutes");
 const logRoutes = require("./routes/logRoutes");
 const amkQuantityRoutes = require("./routes/amkQuantityRoutes");
 const seriesRoutes = require("./routes/seriesRouter")
+const varietiesLotsRoutes = require("./routes/varietiesLotsRoutes");
 
 const PORT = process.env.PORT || 8080;
 
@@ -57,7 +57,6 @@ app.use("/api", driverVehicleRoutes); // Mount the driver vehicle routes under /
 app.use("/api", assignedLtsRoutes); // Mount the assigned lts routes under /api
 app.use("/api", fetchDetailsRoutes); // Mount the all details fetch routes under /api
 app.use("/api", importDataRoutes);
-app.use("/api", syncDataRoutes);
 app.use("/api", formationRoutes);
 app.use("/api", driverVehicleNotLoadedRoutes);
 app.use("/api", gateCheckoutSyncRoutes);
@@ -68,7 +67,8 @@ app.use("/api", backupRoutes);
 app.use("/api", logRoutes);
 app.use("/api", checkConnectionRoutes);
 app.use("/api", amkQuantityRoutes);
-app.use("/api", seriesRoutes)
+app.use("/api", seriesRoutes);
+app.use("/api", varietiesLotsRoutes);
 
 
 const ipAddress = process.env.SERVER_IP || getLocalIP();
