@@ -21,11 +21,6 @@ module.exports = (sequelize, DataTypes) => {
         as: "varityData",
       });
 
-      SktVarieties.hasMany(models.VarietyLoadStatusDetail, {
-        foreignKey: "skt_variety_id",
-        as: "sktvarietyLoadData",
-      });
-
       SktVarieties.hasMany(models.VarietiesLotDetails, {
         foreignKey: "skt_variety_id",
         as: "sktVarietyLotData",

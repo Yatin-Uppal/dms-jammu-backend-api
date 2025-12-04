@@ -11,7 +11,6 @@ async function softDeleteTables() {
         'SktDetails',
         'SktVarieties',
         'VarietyDetail',
-        'VarietyLoadStatusDetail',
     ];
   
     try {

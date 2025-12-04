@@ -1,5 +1,7 @@
 const db = require("../models");
 const { getSktData, getSktDataWithVarieties } = require("./ltsServices");
+const { getLocalIP } = require("../helpers/ipHandler");
+const { generateQrCode } = require("../helpers/qrCodeGenerator");
 
 // Create a function to get LTS data for a specific driver
 exports.getLtsDataForDriverNotLoaded = async (lts_id) => {
@@ -28,7 +30,54 @@ exports.getLtsDataForDriverNotLoaded = async (lts_id) => {
     }
     const sktData = await getSktData(lts.id);
     // Initialize an array to store the transformed skt data
-    const sktDataWithVarieties = await getSktDataWithVarieties(sktData);
+    let sktDataWithVarieties = await getSktDataWithVarieties(sktData);
+    const url = `http://${getLocalIP()}:${process.env.PORT || 8080}/` || process.env.BASE_URL;
+
+    // 1) Collect all variety IDs (flat array)
+    const varietyIds = [];
+    for (const skt of sktData) {
+      for (const variety of skt.sktvarityData) {
+        varietyIds.push(variety.variety_id);
+      }
+    }
+
+    // 2) Fetch all lot details for these varieties
+    const varietiesLots = await db.VarietiesLotDetails.findAll();
+    //   {
+    //   where: {
+    //     skt_variety_id: {
+    //       [db.Sequelize.Op.in]: varietyIds,
+    //     },
+    //   },
+    // });
+
+    // 3) Group lots by skt_variety_id
+    const lotMap = {};
+    varietiesLots.forEach((lot) => {
+      const key = lot.skt_variety_id;
+      if (!lotMap[key]) lotMap[key] = [];
+      lotMap[key].push(
+        {
+          lot_id: lot.id,
+          skt_variety_id: lot.skt_variety_id,
+          lot_number: lot.lot_number,
+          lot_quantity: lot.lot_quantity,
+          load_status: lot.load_status,
+          qr_reference_id: url + lot.qr_reference_id,
+          created_at: lot.created_at
+        }
+      );
+    });
+
+    // 4) Attach lots to each variety
+    sktDataWithVarieties = sktDataWithVarieties.map((skt) => ({
+      ...skt,
+      varieties: skt.varieties.map((variety) => {
+        return {
+        ...variety,
+        varietyLotData: lotMap[`${variety.variety_id}`] || [],
+      }}),
+    }));
 
     // Transform the data into the desired format
     const ltsData = {
@@ -226,6 +275,13 @@ exports.storeBulkDriverData = async (bulkDriverData) => {
                 },
                 { transaction }
               );
+              
+              const lotDetails = variety.varietyLotData.map((lot) => ({
+                ...lot,
+                skt_variety_id: newVariety.id,
+                qr_reference_id: `?lot_number=${lot.lot_number}&qty=${lot.lot_quantity}&qr_code=${generateQrCode()}`,
+              }))
+              await db.VarietiesLotDetails.bulkCreate(lotDetails, { transaction });
             }
           }
         }
@@ -275,6 +331,16 @@ async function deleteExistingData(ltsId, transaction) {
     await db.VarietyDetail.destroy({
       where: {
         id: {
+          [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.variety_id),
+        },
+      },
+      transaction,
+    });
+
+    // delete all varieties lots quantity
+    await db.VarietiesLotDetails.destroy({
+      where: {
+        skt_variety_id: {
           [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.variety_id),
         },
       },

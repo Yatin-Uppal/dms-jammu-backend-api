@@ -16,6 +16,10 @@ async function softDeleteDriverData(driverIds, LTSIds) {
       paranoid: true, // Enable soft delete by using the paranoid option
     });
 
+    // Call a function to delete other related data if needed (e.g., LTS data)
+    // Pass the LTS IDs, driver IDs, and transaction
+    await deleteExistingData(driverIds, LTSIds, transaction);
+
     // Soft delete records within the specified date range in DriverVehicleDetail
     await db.DriverVehicleDetail.destroy({
       where: {
@@ -26,10 +30,6 @@ async function softDeleteDriverData(driverIds, LTSIds) {
       transaction,
       paranoid: true, // Enable soft delete by using the paranoid option
     });
-
-    // Call a function to delete other related data if needed (e.g., LTS data)
-    // Pass the LTS IDs, driver IDs, and transaction
-    await deleteExistingData(driverIds, LTSIds, transaction);
 
     await transaction.commit();
 
@@ -86,11 +86,11 @@ async function deleteExistingData(driverIds, LTSIds, transaction) {
         paranoid: true, // Enable soft delete by using the paranoid option
       });
 
-      await db.VarietyLoadStatusDetail.destroy({
+      await db.VarietiesLotDetails.destroy({
         where: {
           // You may need to adjust this condition based on your database schema
-          driver_vehicle_id: {
-            [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.id),
+          skt_variety_id: {
+            [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.variety_id),
           },
         },
         transaction,

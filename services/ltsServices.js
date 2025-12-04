@@ -27,6 +27,7 @@ exports.getSktDataWithVarieties = async (sktData) => {
               id: variety.variety_id,
             },
             attributes: [
+              "id",
               "amk_number",
               "nomenclature",
               "ipq",
@@ -40,6 +41,7 @@ exports.getSktDataWithVarieties = async (sktData) => {
 
           // Transform variety data
           return {
+            variety_id: varietyData.id,
             amk_number: varietyData.amk_number,
             nomenclature: varietyData.nomenclature,
             ipq: varietyData.ipq,
@@ -54,6 +56,7 @@ exports.getSktDataWithVarieties = async (sktData) => {
       );
 
       return {
+        skt_id: skt.id,
         skt_name: skt.name,
         varieties: sktVarieties,
       };

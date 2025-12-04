@@ -1,4 +1,5 @@
 const db = require("../models");
+const { getLocalIP } = require("../helpers/ipHandler");
 
 // Returns all the LTS irrespective of created LOT or not
 exports.getAllLtsList = async () => {
@@ -104,13 +105,14 @@ exports.getVarietyLotsList = async (parameters) => {
         }
 
         // LOT list
+        const url = `http://${getLocalIP()}:${process.env.PORT || 8080}/` || process.env.BASE_URL;
         const lotDetails = (sktVarietyLotData || []).map(lot => ({
             lot_id: lot.id,
             skt_variety_id: lot.skt_variety_id,
             lot_number: lot.lot_number,
             lot_quantity: Number(lot.lot_quantity),
             lot_load_status: lot.load_status,
-            qr_reference_id: lot.qr_reference_id,
+            qr_reference_id: url + lot.qr_reference_id,
             lot_created_at: lot.created_at,
         }));
 

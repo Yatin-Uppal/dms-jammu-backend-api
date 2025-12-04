@@ -121,6 +121,10 @@ module.exports = {
           "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
         ),
       },
+      deleted_at: {
+        type: Sequelize.DATE,
+        allowNull: true,
+      }
     });
   },
   async down(queryInterface, Sequelize) {

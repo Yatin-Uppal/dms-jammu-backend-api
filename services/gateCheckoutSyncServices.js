@@ -1,4 +1,5 @@
 const db = require("../models");
+const { generateQrCode } = require("../helpers/qrCodeGenerator");
 
 exports.storeGateCheckoutData = async (bulkDriverData) => {
   const transaction = await db.sequelize.transaction();
@@ -47,7 +48,7 @@ exports.storeGateCheckoutData = async (bulkDriverData) => {
               { transaction }
             );
 
-            const newSKTVariety = await db.SktVarieties.create(
+            await db.SktVarieties.create(
               {
                 skt_id: newSkt.id,
                 variety_id: newVariety.id,
@@ -55,27 +56,20 @@ exports.storeGateCheckoutData = async (bulkDriverData) => {
               { transaction }
             );
 
-            // Conditionally insert loaded_by and loaded_time based on is_loaded
-            const varietyLoadStatusData = {
+            const lotDetails = variety.varietyLotData.map((lot) => ({
+              ...lot,
               driver_vehicle_id: driverData.driver_id,
-              skt_variety_id: newSKTVariety.id,
-
-              is_loaded: variety.is_loaded,
-            };
-
-            if (variety.is_loaded) {
-              // Prepare lot_number and qty as comma-separated strings
-              const lotNumberString = variety.lot_number.join(",");
-              const qtyString = variety.lot_qty.join(",");
-              (varietyLoadStatusData.lot_number = lotNumberString),
-                (varietyLoadStatusData.qty = qtyString),
-                (varietyLoadStatusData.loaded_by = variety.loaded_by);
-              varietyLoadStatusData.loaded_time = variety.loaded_time;
-            }
-
-            await db.VarietyLoadStatusDetail.create(varietyLoadStatusData, {
-              transaction,
-            });
+              skt_variety_id: newVariety.id,
+              ...(variety.is_loaded && {
+                lot_number: lot.lot_number,
+                lot_quantity: lot.lot_quantity,
+                load_status: variety.load_status ?? "Loaded",
+                loaded_by: variety.loaded_by,
+                loaded_time: variety.loaded_time,
+                qr_reference_id: `?lot_number=${lot.lot_number}&qty=${lot.lot_quantity}&qr_code=${generateQrCode()}`,
+              }),
+            }))
+            await db.VarietiesLotDetails.bulkCreate(lotDetails, { transaction });
           }
         }
 
@@ -132,6 +126,16 @@ async function deleteExistingData(ltsId, transaction) {
     await db.VarietyDetail.destroy({
       where: {
         id: {
+          [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.variety_id),
+        },
+      },
+      transaction,
+    });
+
+    // delete all varieties lots quantity
+    await db.VarietiesLotDetails.destroy({
+      where: {
+        skt_variety_id: {
           [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.variety_id),
         },
       },

@@ -13,9 +13,20 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "skt_variety_id",
         as: "varityLotData",
       });
+
+      VarietiesLotDetails.belongsTo(models.User, {
+        foreignKey: "loaded_by",
+        as: "LoadedUserData",
+      });
+      
+      VarietiesLotDetails.belongsTo(models.DriverVehicleDetail, {
+        foreignKey: "driver_vehicle_id",
+        as: "lotsVehicleData",
+      });
     }
   }
   VarietiesLotDetails.init({
+    driver_vehicle_id: DataTypes.INTEGER,
     skt_variety_id: DataTypes.INTEGER,
     lot_number: DataTypes.STRING(100),
     lot_quantity: DataTypes.DECIMAL(10, 3),
@@ -24,6 +35,8 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: "Pending",
     },
     qr_reference_id: DataTypes.STRING(200),
+    loaded_by: DataTypes.INTEGER,
+    loaded_time: DataTypes.DATE,
     is_deleted: DataTypes.BOOLEAN,
   }, {
     sequelize,

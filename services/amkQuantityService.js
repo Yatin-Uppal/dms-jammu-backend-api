@@ -29,7 +29,7 @@ async function getAMKQuantityService({
   };
 
   let {count, rows} = await db.ManageAmkQuantity.findAndCountAll({
-    attributes: ["id", "amk_number", "total_quantity", "sr_no", "mmf", "remarks", "sec", "nomenclature", "a_u", "location_33_fad"],
+    attributes: ["id", "amk_number", "total_quantity", "sr_no", "location_33_fad"],
     where: { ...whereClause },
     offset,
     limit,
@@ -112,11 +112,11 @@ function calculateLoadedQuantity(loadedQuantityData) {
   return (
     loadedQuantityData &&
     loadedQuantityData.sktvarityData.reduce((acc, sktVarityData) => {
-      const loadedData = sktVarityData.sktvarietyLoadData.find(
-        (loadData) => loadData.skt_variety_id === sktVarityData.id
+      const loadedData = sktVarityData.sktVarietyLotData.find(
+        (loadData) => loadData.skt_variety_id === sktVarityData.variety_id
       );
       if (loadedData) {
-        acc += Number(loadedData.qty);
+        acc += Number(loadedData.lot_quantity);
       }
       return acc;
     }, 0)

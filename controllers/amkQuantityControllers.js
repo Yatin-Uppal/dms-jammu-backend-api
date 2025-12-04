@@ -32,7 +32,7 @@ exports.storeAMKQuantity = async (req, res) => {
   }
 
   try {
-    const { amk_number, location_33_fad, total_quantity, nomenclature, mmf, sec, a_u, remarks } = req.body;
+    const { amk_number, location_33_fad, total_quantity, nomenclature } = req.body;
 
     // Check if the combination already exists
     const existingRecord = await db.ManageAmkQuantity.findOne({
@@ -73,11 +73,7 @@ exports.storeAMKQuantity = async (req, res) => {
       location_33_fad,
       total_quantity,
       nomenclature,
-      mmf,
-      sec,
-      a_u,
       sr_no: newSrNo,
-      remarks: remarks ?? null,
     });
 
     responseHandler(req, res, 200, true, "", {}, "Data stored successfully.");
@@ -104,7 +100,7 @@ exports.updateAMKQuantity = async (req, res) => {
   }
 
   try {
-    let { amk_number, location_33_fad, total_quantity, nomenclature, sec, mmf, a_u, remarks } = req.body;
+    let { amk_number, location_33_fad, total_quantity, nomenclature } = req.body;
     const { amk_id } = req.params;
 
     const existData = await db.ManageAmkQuantity.findOne({
@@ -133,10 +129,6 @@ exports.updateAMKQuantity = async (req, res) => {
     location_33_fad = location_33_fad || existData.location_33_fad;
     total_quantity = total_quantity || existData.total_quantity;
     nomenclature = nomenclature || existData.nomenclature;
-    sec = sec || existData.sec;
-    // mmf = mmf || existData.mmf;
-    a_u = a_u || existData.a_u;
-    remarks = remarks || existData.remarks;
 
 
     // Check if the combination already exists for other records
@@ -171,11 +163,7 @@ exports.updateAMKQuantity = async (req, res) => {
         amk_number,
         location_33_fad,
         total_quantity,
-        nomenclature,
-        sec,
-        a_u,
-        mmf,
-        remarks: remarks ?? null,
+        nomenclature
       },
       {
         where: {
@@ -554,9 +542,9 @@ exports.getAMKQuantity = async (req, res) => {
               attributes: ["id", "amk_number", "qty", "number_of_package"],
             },
             {
-              model: db.VarietyLoadStatusDetail,
-              as: "sktvarietyLoadData",
-              attributes: ["id", "skt_variety_id", "qty"],
+              model: db.VarietiesLotDetails,
+              as: "sktVarietyLotData",
+              attributes: ["id", "skt_variety_id", "lot_quantity"],
             },
           ],
         },

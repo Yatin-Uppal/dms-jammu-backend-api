@@ -47,13 +47,6 @@ router.post(
       .isLength({ max: 200 })
       .withMessage("Location must be a string of maximum 100 characters"),
     body("total_quantity").notEmpty().withMessage("Quatity is required."),
-      // body("nomenclature").notEmpty().withMessage("Nomenclature is required.")
-      //     .isString().withMessage("Nomenclature must be an string.")
-      //     .isLength({ max: 200 }).withMessage("Nomenclature must be a string of maximum 200 characters"),
-      // body("a_u").notEmpty().withMessage("A/U is required.").isString().withMessage("A/U must be an string."),
-      // body("sec").notEmpty().withMessage("Section is required."),
-      // body("mmf").notEmpty().withMessage("MMF is required."),
-
   ],
 
   amkQuantityControllers.storeAMKQuantity
@@ -83,12 +76,6 @@ router.put(
       .optional()
       .notEmpty()
       .withMessage("Quatity is required."),
-      // body("nomenclature").notEmpty().withMessage("Nomenclature is required.")
-      //     .isString().withMessage("Nomenclature must be an string.")
-      //     .isLength({ max: 200 }).withMessage("Nomenclature must be a string of maximum 200 characters"),
-      // body("a_u").notEmpty().withMessage("A/U is required.").isString().withMessage("A/U must be an string."),
-      // body("sec").notEmpty().withMessage("Section is required."),
-      // body("mmf").notEmpty().withMessage("MMF is required.").isNumeric().withMessage("MMF must be a Number"),
 
   ],
 

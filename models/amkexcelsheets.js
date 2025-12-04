@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
     }
     AmkExcelSheets.init(
         {
-            file_id: DataTypes.STRING, // Changed from INT to INTEGER
+            file_id: DataTypes.STRING(200), // Changed from INT to INTEGER
             excel_file_name: DataTypes.STRING(200),
             uploaded_by: DataTypes.STRING(200),
             store_type: DataTypes.STRING(200),

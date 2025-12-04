@@ -5,6 +5,7 @@ const { generateQrCode } = require("../helpers/qrCodeGenerator");
 const { getLocalIP } = require("../helpers/ipHandler");
 
 const transformLotDetails = (lotDetails) => {
+    const url = `http://${getLocalIP()}:${process.env.PORT || 8080}/` || process.env.BASE_URL;
     const data = lotDetails.map(lts => {
         const transformedData = lts.sktData.map(skt => {
             return {
@@ -16,7 +17,10 @@ const transformLotDetails = (lotDetails) => {
                         amk_number: variety?.varityData[0]?.amk_number,
                         nomenclature: variety?.varityData[0]?.nomenclature,
                         qty: variety?.varityData[0]?.qty,
-                        varietyLotData: variety.sktVarietyLotData
+                        varietyLotData: variety.sktVarietyLotData.map(lot => ({
+                            ...lot,
+                            qr_reference_id: `${url}${lot.qr_reference_id}`
+                        }))
                     }
                 })
             }
@@ -125,13 +129,12 @@ exports.createVarietyLots = async (req, res) => {
         if (!errors.isEmpty()) {
             return responseHandler(req, res, 400, false, "Validation errors", { errors: errors.array() }, "");
         }
-        const url = `http://${getLocalIP()}:${process.env.PORT || 8080}/` || process.env.BASE_URL;
         let lotsData = req.body;
         lotsData = lotsData.map(lot => {
             return {
                 ...lot,
                 lot_quantity: parseInt(lot.lot_quantity),
-                qr_reference_id: `${url}?lot_number=${lot.lot_number}&qty=${lot.lot_quantity}&qr_code=${generateQrCode()}`
+                qr_reference_id: `?lot_number=${lot.lot_number}&qty=${lot.lot_quantity}&qr_code=${generateQrCode()}`
             }
         })
         const result = await varietiesLotsService.createVarietyLots(lotsData);
@@ -149,13 +152,12 @@ exports.updateVarietyLots = async (req, res) => {
             return responseHandler(req, res, 400, false, "Validation errors", { errors: errors.array() }, "");
         }
         const id = req.params.id;
-        const url = `http://${getLocalIP()}:${process.env.PORT || 8080}/` || process.env.BASE_URL;
         let lotsData = req.body;
         lotsData = lotsData.map(lot => {
             return {
                 ...lot,
                 lot_quantity: parseInt(lot.lot_quantity),
-                qr_reference_id: `${url}?lot_number=${lot.lot_number}&qty=${lot.lot_quantity}&qr_code=${generateQrCode()}`
+                qr_reference_id: `?lot_number=${lot.lot_number}&qty=${lot.lot_quantity}&qr_code=${generateQrCode()}`
             }
         })
         const result = await varietiesLotsService.updateVarietyLots(id, lotsData);

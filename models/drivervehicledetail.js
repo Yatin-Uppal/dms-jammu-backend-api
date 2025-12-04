@@ -48,10 +48,10 @@ module.exports = (sequelize, DataTypes) => {
         as: "assignedLtsData",
       });
 
-      // DriverVehicleDetail.belongsTo(models.VarietyLoadStatusDetail, {
-      //   foreignKey: "driver_vehicle_id",
-      //   as: "driverVehicleDetail",
-      // });
+      DriverVehicleDetail.hasMany(models.VarietiesLotDetails, {
+        foreignKey: "driver_vehicle_id",
+        as: "vehicleLotsData",
+      });
     }
   }
   DriverVehicleDetail.init(
