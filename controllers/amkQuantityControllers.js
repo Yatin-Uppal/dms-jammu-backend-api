@@ -135,13 +135,14 @@ exports.updateAMKQuantity = async (req, res) => {
     const existingRecord = await db.ManageAmkQuantity.findOne({
       where: {
         amk_number,
+        location_33_fad,
         [db.Sequelize.Op.or]: [
           { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
           { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
         ],
         id: {
-          [db.Sequelize.Op.not]: amk_id, // Exclude the current record being updated
-        },
+          [db.Sequelize.Op.ne]: amk_id,
+        }
       },
     });
 

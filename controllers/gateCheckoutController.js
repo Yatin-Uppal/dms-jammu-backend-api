@@ -40,6 +40,7 @@ exports.handleBulkGateCheckoutData = async(req, res) => {
         );
      
     } catch (error) {
+      console.log('error: ', error);
       // if (transaction) {
       //   // Roll back the transaction if there's an error
       //   await transaction.rollback();

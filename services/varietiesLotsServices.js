@@ -25,7 +25,7 @@ exports.getVarietyLotsList = async (parameters) => {
     const limit = parameters?.limit ? parameters.limit : 10;
     const offset = page > 1 ? (page - 1) * limit : 0;
 
-    const lts_number = parameters?.lts_number ? parameters.lts_number : null;
+    const lts_name = parameters?.lts_name ? parameters.lts_name : null;
     const start_date = parameters?.start_date ? parameters.start_date : null;
     const end_date = parameters?.end_date ? parameters.end_date : null;
     const variety_amk_no = parameters?.variety_amk_no ? parameters.variety_amk_no : null;
@@ -46,9 +46,9 @@ exports.getVarietyLotsList = async (parameters) => {
                         model: db.LtsDetail,
                         as: "ltsDetail",
                         required: false,
-                        attributes: ["name"],
+                        attributes: ["id", "name"],
                         where: {
-                            ...(lts_number && { name: lts_number }),
+                            ...(lts_name && { name: lts_name }),
                             [db.Sequelize.Op.or]: [
                                 { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
                                 { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
@@ -134,7 +134,8 @@ exports.getVarietyLotsList = async (parameters) => {
             skt_name: sktData?.name,
 
             // LTS Info
-            lts_number: ltsDetail?.name,
+            lts_id: ltsDetail?.id,
+            lts_name: ltsDetail?.name,
 
             // Creator Info
             created_by: createdBy ? `${createdBy.first_name} ${createdBy.last_name}` : null,
@@ -154,6 +155,7 @@ exports.getVarietyLotsList = async (parameters) => {
 
 exports.getLtsLotsDetail = async (parameters) => {
     const lts_id = parameters?.lts_id ? parameters.lts_id : null;
+    const variety_id = parameters?.variety_id ? parameters.variety_id : null;
     
     try {
         const result = await db.LtsDetail.findAll({
@@ -175,6 +177,9 @@ exports.getLtsLotsDetail = async (parameters) => {
                             model: db.SktVarieties,
                             as: "sktvarityData",
                             attributes: ["id", "variety_id", "skt_id"],
+                            where: {
+                                ...(variety_id && { variety_id: variety_id }),
+                            },
                             include: [
                                 {
                                     model: db.VarietyDetail,

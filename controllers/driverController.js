@@ -11,11 +11,9 @@ const path = require("path");
 const fs = require("fs");
 const {
   formatDateToYYYYMMDD,
-  calculateDurationInSeconds,
   formatTime,
-  parseDuration,
-  formatexcelFileTime,
 } = require("../services/timeFormatServices");
+const { transformLotDetails } = require("./varietiesLotsController");
 const { getLocalIP } = require("../helpers/ipHandler");
 
 exports.fetchDetails = async (req, res) => {
@@ -121,6 +119,7 @@ exports.fetchDetails = async (req, res) => {
                             "skt_variety_id",
                             "lot_number",
                             "lot_quantity",
+                            "qr_reference_id",
                             "load_status",
                             "loaded_by",
                             "loaded_time",
@@ -212,6 +211,7 @@ exports.fetchDetails = async (req, res) => {
     if (driverData.assignedLtsData.length > 0) {
       Promise.all(
         driverData.assignedLtsData.map(async (assignedLts) => {
+          assignedLts.ltsDetail = transformLotDetails([assignedLts.ltsDetail]);
           assignedLts.isDuplicate = false;
           const match = await db.AssignedLtsDetail.findOne({
             where: {
@@ -244,6 +244,7 @@ exports.fetchDetails = async (req, res) => {
           );
         })
         .catch((error) => {
+          console.log('error: ', error);
           responseHandler(req, res, 500, false, "Server error", { error }, "");
         });
     } else {
@@ -370,6 +371,36 @@ exports.fetchRecords = async (req, res) => {
               model: db.LtsDetail,
               as: "ltsDetail",
               attributes: ["id", "name", "lts_date_and_time", "type"],
+              include: [
+                {
+                  model: db.SktDetails,
+                  as: "sktData",
+                  attributes: ["id", "name"],
+                  include: [
+                    {
+                      model: db.SktVarieties,
+                      as: "sktvarityData",
+                      attributes: ["id", "variety_id", "skt_id"],
+                      include: [
+                        {
+                          model: db.VarietyDetail,
+                          as: "varityData",
+                          attributes: [
+                            "id",
+                            "amk_number",
+                            "nomenclature",
+                            "qty"
+                          ],
+                        },
+                        {
+                          model: db.VarietiesLotDetails,
+                          as: "sktVarietyLotData",
+                        },
+                      ],
+                    },
+                  ],
+                }
+              ]
             },
           ],
         },
@@ -436,23 +467,35 @@ exports.fetchRecords = async (req, res) => {
     }
 
     // Iterate through the driverData rows and check for duplicates
-    for (const row of driverData.rows) {
-      const assignedLtsData = row.assignedLtsData;
+    let driversResult = driverData.rows.map(row => row.toJSON());
+
+    // Build transformed result
+    driversResult = driversResult.map(row => {
+      const assignedLtsData = row.assignedLtsData || [];
       let isDuplicate = false;
 
-      for (const ltsData of assignedLtsData) {
-        const ltsIssueVoucherDetailId = ltsData.lts_issue_voucher_detail_id;
-        const driverVehicleDetailId = ltsData.driver_vehicle_detail_id;
+      const transformedAssigned = assignedLtsData.map(ltsData => {
+        const voucherId = ltsData.lts_issue_voucher_detail_id;
 
-        // Check if the lts_issue_voucher_detail_id has multiple driver_vehicle_detail_ids
-        if (ltsDetailIds[ltsIssueVoucherDetailId].length > 1) {
+        // Duplicate logic
+        if (ltsDetailIds[voucherId] && ltsDetailIds[voucherId].length > 1) {
           isDuplicate = true;
-          break;
         }
-      }
 
-      row.dataValues.isDuplicate = isDuplicate;
-    }
+        // Transform LOT details (always pure JSON now)
+        return {
+          ...ltsData,
+          ltsDetail: transformLotDetails([ltsData.ltsDetail])[0],
+        };
+      });
+
+      return {
+        ...row,
+        assignedLtsData: transformedAssigned,
+        isDuplicate,
+      };
+    });
+
 
     if (!driverData) {
       return responseHandler(
@@ -473,7 +516,7 @@ exports.fetchRecords = async (req, res) => {
       limit: parseInt(limit),
       page: parseInt(page),
       total_pages: totalPages,
-      records: driverData.rows,
+      records: driversResult,
     };
 
     responseHandler(

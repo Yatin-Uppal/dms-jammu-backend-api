@@ -277,7 +277,10 @@ exports.storeBulkDriverData = async (bulkDriverData) => {
               );
               
               const lotDetails = variety.varietyLotData.map((lot) => ({
-                ...lot,
+                driver_vehicle_id: driverData?.driver_id || null,
+                lot_number: lot.lot_number,
+                lot_quantity: lot.lot_quantity,
+                load_status: lot.load_status,
                 skt_variety_id: newVariety.id,
                 qr_reference_id: `?lot_number=${lot.lot_number}&qty=${lot.lot_quantity}&qr_code=${generateQrCode()}`,
               }))

@@ -17,8 +17,13 @@ const transformLotDetails = (lotDetails) => {
                         amk_number: variety?.varityData[0]?.amk_number,
                         nomenclature: variety?.varityData[0]?.nomenclature,
                         qty: variety?.varityData[0]?.qty,
+                        ipq: variety?.varityData[0]?.ipq,
+                        package_weight: variety?.varityData[0]?.package_weight,
+                        number_of_package: variety?.varityData[0]?.number_of_package,
+                        location_33_fad: variety?.varityData[0]?.location_33_fad,
+                        fad_loading_point_lp_number: variety?.varityData[0]?.fad_loading_point_lp_number,
                         varietyLotData: variety.sktVarietyLotData.map(lot => ({
-                            ...lot,
+                            ...(typeof lot?.toJSON === "function" ? lot.toJSON() : lot),
                             qr_reference_id: `${url}${lot.qr_reference_id}`
                         }))
                     }
@@ -28,17 +33,18 @@ const transformLotDetails = (lotDetails) => {
         return {
             lts_id: lts.id,
             lts_name: lts.name,
-            created_at: lts.created_at,
-            created_by: lts.createdBy?.first_name + " " + lts.createdBy?.last_name,
+            ...(lts.type && { lts_type: lts.type }),
+            created_at: lts?.created_at,
+            ...((lts?.createdBy?.first_name && lts?.createdBy?.last_name) && { created_by: lts?.createdBy?.first_name + " " + lts?.createdBy?.last_name }),
             sktData: transformedData
         }
     })
     return data;
 }
 
-exports.getLotDetailsList = async (req, res) => {
+const getLotDetailsList = async (req, res) => {
     try {
-        const lts_number = req.query?.lts_number ? req.query.lts_number : null;
+        const lts_name = req.query?.lts_name ? req.query.lts_name : null;
         const variety_amk_no = req.query?.variety_amk_no ? req.query.variety_amk_no : null;
         const location = req.query?.location ? req.query.location : null;
         const start_date = req.query?.start_date ? req.query.start_date : null;
@@ -46,7 +52,7 @@ exports.getLotDetailsList = async (req, res) => {
         const pageNo = req.query?.page ? parseInt(req.query.page) : 1;
         const limit = req.query?.limit ? parseInt(req.query.limit) : 10;
 
-        const lotDetails = await varietiesLotsService.getVarietyLotsList({ pageNo, limit, lts_number, variety_amk_no, location, start_date, end_date });
+        const lotDetails = await varietiesLotsService.getVarietyLotsList({ pageNo, limit, lts_name, variety_amk_no, location, start_date, end_date });
 
         responseHandler( req, res, 200, true, "", lotDetails, "LOT details fetched successfully");
     } catch (error) {
@@ -55,7 +61,7 @@ exports.getLotDetailsList = async (req, res) => {
     }
 }
 
-exports.getAllLtsList = async (req, res) => {
+const getAllLtsList = async (req, res) => {
     try {
         const lotDetails = await varietiesLotsService.getLtsLotsDetail();
         const result = lotDetails
@@ -93,7 +99,44 @@ exports.getAllLtsList = async (req, res) => {
     }
 }
 
-exports.getLtsDetailsById = async (req, res) => {
+const getAllGeneratedLtsList = async (req, res) => {
+    try {
+        const lotDetails = await varietiesLotsService.getLtsLotsDetail();
+        const result = lotDetails
+            .filter(lts => {
+                // Must have SKT data
+                if (!lts.sktData || lts.sktData.length === 0) return false;
+
+                // Loop through each SKT entry
+                return lts.sktData.some(skt => {
+                    if (!skt.sktvarityData || skt.sktvarityData.length === 0) return false;
+
+                    // Check each variety
+                    return skt.sktvarityData.some(variety => {
+                        // const varietyQty = variety.varityData?.[0]?.qty ?? 0;
+                        const lots = variety.sktVarietyLotData || [];
+
+                        // Sum of lot quantities
+                        // const totalLotQty = lots.reduce((sum, lot) => sum + (lot.lot_quantity || 0), 0);
+
+                        // Keep this LTS only if lot is not created
+                        return lots.length !== 0;
+                        // return totalLotQty < varietyQty;
+                    });
+                });
+            })
+            .map(lts => ({
+                id: lts.id,
+                name: lts.name
+            }));
+        responseHandler(req, res, 200, true, "", result, "All LTS fetched successfully");
+    } catch (error) {
+        console.log('error: ', error);
+        responseHandler(req, res, 500, false, "Server error", { error }, "");
+    }
+}
+
+const getLtsDetailsById = async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -101,8 +144,9 @@ exports.getLtsDetailsById = async (req, res) => {
         }
 
         const lts_id = req.params.lts_id;
+        const variety_id = req.params?.variety_id ? req.params.variety_id : null;
 
-        const lotDetails = await varietiesLotsService.getLtsLotsDetail({ lts_id });
+        const lotDetails = await varietiesLotsService.getLtsLotsDetail({ lts_id, variety_id });
 
         const result = transformLotDetails(lotDetails);
 
@@ -123,7 +167,7 @@ exports.getLtsDetailsById = async (req, res) => {
     }
 }
 
-exports.createVarietyLots = async (req, res) => {
+const createVarietyLots = async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -145,7 +189,7 @@ exports.createVarietyLots = async (req, res) => {
     }
 }
 
-exports.updateVarietyLots = async (req, res) => {
+const updateVarietyLots = async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -167,7 +211,7 @@ exports.updateVarietyLots = async (req, res) => {
     }
 }
 
-exports.deleteVarietyLots = async (req, res) => {
+const deleteVarietyLots = async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -180,3 +224,14 @@ exports.deleteVarietyLots = async (req, res) => {
         responseHandler(req, res, 500, false, "Server error", { error }, "");
     }
 }
+
+module.exports = {
+    transformLotDetails,
+    getLotDetailsList,
+    getAllLtsList,
+    getAllGeneratedLtsList,
+    getLtsDetailsById,
+    createVarietyLots,
+    updateVarietyLots,
+    deleteVarietyLots
+};
