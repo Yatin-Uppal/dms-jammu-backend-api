@@ -545,7 +545,7 @@ exports.getAMKQuantity = async (req, res) => {
             {
               model: db.VarietiesLotDetails,
               as: "sktVarietyLotData",
-              attributes: ["id", "skt_variety_id", "lot_quantity"],
+              attributes: ["id", "skt_variety_id", "lot_quantity", "load_status"],
             },
           ],
         },
@@ -564,7 +564,7 @@ exports.getAMKQuantity = async (req, res) => {
       true,
       "",
       { amkQuantityData: result, page, limit, totalCount, totalPage },
-      "Amk Quantity fecthed successfully"
+      "Amk Quantity fetched successfully"
     );
   } catch (error) {
     responseHandler(req, res, 500, false, "Server error", { error }, "");

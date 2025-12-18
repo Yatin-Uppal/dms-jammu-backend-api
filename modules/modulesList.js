@@ -76,3 +76,9 @@ exports.manage_series = [
   "/api/manage_series/series",
   "/api/manage_series/series_batch"
 ]
+
+exports.manage_qr_codes_api = [
+  "/api/lot-qr-details/generate-lot-qr",
+  "/api/lot-qr-details/update-lot-qr",
+  "/api/delete-lots-qr-details"
+]

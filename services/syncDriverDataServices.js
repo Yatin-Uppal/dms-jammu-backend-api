@@ -43,13 +43,6 @@ exports.getLtsDataForDriverNotLoaded = async (lts_id) => {
 
     // 2) Fetch all lot details for these varieties
     const varietiesLots = await db.VarietiesLotDetails.findAll();
-    //   {
-    //   where: {
-    //     skt_variety_id: {
-    //       [db.Sequelize.Op.in]: varietyIds,
-    //     },
-    //   },
-    // });
 
     // 3) Group lots by skt_variety_id
     const lotMap = {};
@@ -70,14 +63,27 @@ exports.getLtsDataForDriverNotLoaded = async (lts_id) => {
     });
 
     // 4) Attach lots to each variety
-    sktDataWithVarieties = sktDataWithVarieties.map((skt) => ({
-      ...skt,
-      varieties: skt.varieties.map((variety) => {
-        return {
-        ...variety,
-        varietyLotData: lotMap[`${variety.variety_id}`] || [],
-      }}),
-    }));
+    sktDataWithVarieties = sktDataWithVarieties.reduce((acc, skt) => {
+      const varieties = [];
+      for (const variety of skt.varieties) {
+        const lots = lotMap[variety.variety_id] || [];
+        // If ANY variety has no lot data → return empty result
+        if (lots.length === 0) {
+          return [];
+        }
+
+        varieties.push({
+          ...variety,
+          varietyLotData: lots,
+        });
+      }
+      acc.push({
+        ...skt,
+        varieties,
+      });
+
+      return acc;
+    }, []);
 
     // Transform the data into the desired format
     const ltsData = {
@@ -90,7 +96,7 @@ exports.getLtsDataForDriverNotLoaded = async (lts_id) => {
       skts: sktDataWithVarieties,
     };
 
-    return ltsData;
+    return ltsData.skts.length > 0 ? ltsData : null;
   } catch (error) {
     throw error;
   }

@@ -56,18 +56,20 @@ exports.storeGateCheckoutData = async (bulkDriverData) => {
               { transaction }
             );
 
+            if (!variety.varietyLotData || variety.varietyLotData.length === 0) {
+              continue;
+            }
             const lotDetails = variety.varietyLotData.map((lot) => ({
-              ...lot,
               driver_vehicle_id: driverData.driver_id,
               skt_variety_id: newVariety.id,
-              ...(variety.is_loaded && {
-                lot_number: lot.lot_number,
-                lot_quantity: lot.lot_quantity,
-                load_status: variety.load_status ?? "Loaded",
-                loaded_by: variety.loaded_by,
-                loaded_time: variety.loaded_time,
-                qr_reference_id: `?lot_number=${lot.lot_number}&qty=${lot.lot_quantity}&qr_code=${generateQrCode()}`,
+              lot_number: lot.lot_number,
+              lot_quantity: lot.lot_quantity,
+              ...((variety.is_loaded && lot?.load_status === "Loaded") && {
+                load_status: lot.load_status ?? "Loaded",
+                loaded_by: lot.loaded_by,
+                loaded_time: lot.loaded_time,
               }),
+              qr_reference_id: `?lot_number=${lot.lot_number}&qty=${lot.lot_quantity}&qr_code=${generateQrCode()}`,
             }))
             await db.VarietiesLotDetails.bulkCreate(lotDetails, { transaction });
           }

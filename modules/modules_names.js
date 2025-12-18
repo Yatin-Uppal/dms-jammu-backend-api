@@ -5,6 +5,7 @@ exports.modules_actual_name = [
   { function_name: "download_reports_api", module_name: "Download Reports" },
   { function_name: "manage_formation_api", module_name: "Manage Formations" },
   { function_name: "manage_lts_api", module_name: "Manage LTS" },
+  { function_name: "manage_qr_codes_api", module_name: "Generate QR Codes" },
   { function_name: "manage_users_api", module_name: "Manage Users" },
   { function_name: "manage_vehicle_api", module_name: "Manage Vehicles" },
   { function_name: "manage_series", module_name: "Manage Series" },

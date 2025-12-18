@@ -567,23 +567,23 @@ exports.downloadExcel = async (req, res) => {
           }
           varities?.sktvarityData.length > 0 &&
             varities?.sktvarityData.forEach((varity) => {
-              if (varity?.sktvarietyLoadData.length > 0) {
-                varity?.sktvarietyLoadData.forEach((loadDetails) => {
+              if (varity?.sktVarietyLotData.length > 0) {
+                let count = 0;
+                varity?.sktVarietyLotData.forEach((loadDetails) => {
                   if (
                     loadDetails?.lot_number &&
-                    loadDetails?.lot_number.length &&
-                    loadDetails?.lot_number.includes(",")
+                    loadDetails?.lot_quantity &&
+                    loadDetails?.load_status === "Loaded"
                   ) {
-                    let count = loadDetails?.lot_number.split(",").length;
-                    maxQtycount = count > maxQtycount ? count : maxQtycount;
+                    count++;
                   }
                 });
+                maxQtycount = count > maxQtycount ? count : maxQtycount;
               }
             });
         });
       });
     });
-
     //--------------headers
 
     const driverHeaders = [
@@ -611,9 +611,9 @@ exports.downloadExcel = async (req, res) => {
     const ltsHeaders = [];
     for (let i = 1; i <= maxLtsCount; i++) {
       ltsHeaders.push(
-        `${i}. Load Tally Sheet LTS No. / Issue Voucher`,
-        `${i}. Type`,
-        `${i}. LTS Date and Time`
+        `Load Tally Sheet LTS No. / Issue Voucher`,
+        `Type`,
+        `LTS Date and Time`
         // `${i}. Assigned By `
       );
 
@@ -624,21 +624,21 @@ exports.downloadExcel = async (req, res) => {
         // Add headers for each variety under SKT
         for (let k = 1; k <= maxVarietiesCount; k++) {
           ltsHeaders.push(
-            `${k}. AMK Number`,
-            `${k}. Nomenclature`,
-            `${k}. IPQ`,
-            `${k}. Package Weight`,
-            `${k}. Qty Nos.`,
-            `${k}. Number of Packages`,
-            `${k}. SKT Name`,
-            `${k}. FAD Loading Point LP No.`
+            `${j}. AMK Number_${k}`,
+            `${j}. Nomenclature_${k}`,
+            `${j}. IPQ_${k}`,
+            `${j}. Package Weight_${k}`,
+            `${j}. Qty Nos._${k}`,
+            `${j}. Number of Packages_${k}`,
+            `${j}. SKT Name_${k}`,
+            `${j}. FAD Loading Point LP No._${k}`
           );
 
           for (let q = 1; q <= maxQtycount; q++) {
             // Push Quantity and Lot Number headers based on maxQtycount
-            ltsHeaders.push(`${q}. Quantity `, `${q}. Lot Number`);
+            ltsHeaders.push(`${j}. Quantity_${k}${q}`, `${j}. Lot Number_${k}${q}`);
           }
-          ltsHeaders.push(`${k}. Loaded By`, `${k}. Loaded Time`);
+          ltsHeaders.push(`${j}. Loaded By_${k}`, `${j}. Loaded Time_${k}`);
         }
       }
     }
@@ -701,27 +701,20 @@ exports.downloadExcel = async (req, res) => {
             ltsVaritiesRow.push(
               sktVarityData.fad_loading_point_lp_number || ""
             );
-            let lotNumberValues = sktVarityData?.sktvarietyLoadData[0]
-              ?.lot_number
-              ? sktVarityData?.sktvarietyLoadData[0]?.lot_number.split(",")
-              : [];
-            let qtyValues = sktVarityData?.sktvarietyLoadData[0]?.qty
-              ? sktVarityData?.sktvarietyLoadData[0]?.qty.split(",")
-              : [];
             for (let i = 0; i < maxQtycount; i++) {
-              ltsVaritiesRow.push(qtyValues[i] || "");
-              ltsVaritiesRow.push(lotNumberValues[i] || "");
+              ltsVaritiesRow.push(sktVarityData.sktVarietyLotData?.[i]?.lot_quantity || "");
+              ltsVaritiesRow.push(sktVarityData.sktVarietyLotData?.[i]?.lot_number  || "");
             }
             ltsVaritiesRow.push(
-              (sktVarityData?.sktvarietyLoadData[0]?.LoadedUserData
+              (sktVarityData?.sktVarietyLotData[0]?.LoadedUserData
                 ?.first_name || "") +
                 " " +
-                (sktVarityData?.sktvarietyLoadData[0]?.LoadedUserData
+                (sktVarityData?.sktVarietyLotData[0]?.LoadedUserData
                   ?.last_name || "")
             );
             ltsVaritiesRow.push(
               formatDateToYYYYMMDD(
-                sktVarityData?.sktvarietyLoadData[0]?.loaded_time
+                sktVarityData?.sktVarietyLotData[0]?.loaded_time
               ) || ""
             );
           });
@@ -786,78 +779,6 @@ exports.downloadExcel = async (req, res) => {
         }
       }
     }
-    // // Identify the quantity column indices dynamically
-    // const quantityColumnIndices = [];
-    // allHeaders.forEach((header, index) => {
-    //   if (header.toLowerCase().includes("qty")) {
-    //     quantityColumnIndices.push(index);
-    //   }
-    // });
-
-    // // Calculate the total quantity
-    // const totalQuantity = modifiedExcelData.reduce((total, record) => {
-    //   const recordQuantity = quantityColumnIndices.reduce(
-    //     (rowTotal, columnIndex) =>
-    //       rowTotal + parseFloat(record[columnIndex] || 0),
-    //     0
-    //   );
-    //   return total + recordQuantity;
-    // }, 0);
-    // // Calculate the total duration in seconds
-    // const totalDurationInSeconds = modifiedExcelData.reduce((total, record) => {
-    //   const begin = record[15];
-    //   const end = record[16];
-    //   const durationInSeconds = calculateDurationInSeconds(begin, end) || 0; // Use your duration calculation logic
-    //   return total + durationInSeconds;
-    // }, 0);
-    // const totalVehicles = modifiedExcelData.length;
-
-    // // Create the summary worksheet
-    // const summaryHeaders = ["Summary Report", ""];
-    // const summaryValues = [
-    //   ["Total Tonnage:", totalQuantity],
-    //   ["Total Duration:", parseDuration(totalDurationInSeconds)],
-    //   ["Total Vehicles:", totalVehicles],
-    // ];
-
-    // // Add the summary headers and values to the worksheet
-    // summaryWorksheet.addRows([summaryHeaders, ...summaryValues]);
-
-    // // Set the style for the summary headers cell
-    // summaryWorksheet.getCell("A1").font = { bold: true };
-    // summaryWorksheet.getCell("A1").fill = {
-    //   type: "pattern",
-    //   pattern: "solid",
-    //   fgColor: { argb: "EAEAEA" },
-    // };
-    // summaryWorksheet.getCell("A1").border = {
-    //   top: { style: "thin" },
-    //   left: { style: "thin" },
-    //   bottom: { style: "thin" },
-    //   right: { style: "thin" },
-    // };
-
-    // // Apply bold borders to non-empty cells in summaryWorksheet
-    // summaryWorksheet.eachRow((row) => {
-    //   row.eachCell((cell) => {
-    //     cell.border = {
-    //       top: { style: "thin" },
-    //       left: { style: "thin" },
-    //       bottom: { style: "thin" },
-    //       right: { style: "thin" },
-    //     };
-    //   });
-    // });
-
-    // // Merge the cells for the summary header cell
-    // summaryWorksheet.mergeCells("A1:B1");
-
-    // // Set the style for the summary values cells
-    // for (let row = 2; row <= summaryValues.length + 1; row++) {
-    //   for (let col = 1; col <= 1; col++) {
-    //     summaryWorksheet.getCell(row, col).font = { bold: true };
-    //   }
-    // }
 
     // Write the Excel file
     // const timestamp = formatexcelFileTime();
@@ -865,25 +786,8 @@ exports.downloadExcel = async (req, res) => {
     const excelFilePath = path.join(__dirname, "../public", excelFileName);
 
     await workbook.xlsx.writeFile(excelFilePath);
-
-    // Set the appropriate headers for downloading
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=${excelFileName}`
-    );
-
-    const fileStream = fs.createReadStream(excelFilePath);
-    fileStream.pipe(res);
-
-    // Construct the URL to download the Excel file
-    // const URL = process.env.BASE_URL || "http://192.168.0.7:8080/";
-    console.log(getLocalIP());
     
-    const URL = process.env.BASE_URL || `http://${getLocalIP()}:8080/`;
+    const URL = `http://${getLocalIP()}:8080/` || process.env.BASE_URL;
     const excelFileURL = `${URL}${excelFileName}`; // Adjust the URL as needed
 
     // Schedule the deletion of the file after 1 minute
@@ -892,7 +796,7 @@ exports.downloadExcel = async (req, res) => {
         fs.unlinkSync(excelFilePath);
       }
       // Delete the file
-    }, 2 * 1000);
+    }, 5 * 1000);
 
     // Response with success message and download URL
     responseHandler(
@@ -1064,24 +968,7 @@ exports.downloadAmkreport = async (req, res) => {
 
     await workbook.xlsx.writeFile(excelFilePath);
 
-    // Set the appropriate headers for downloading
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=${excelFileName}`
-    );
-
-    const fileStream = fs.createReadStream(excelFilePath);
-    fileStream.pipe(res);
-
-    // Construct the URL to download the Excel file
-    // const URL = process.env.BASE_URL || "http://192.168.0.7:8080/";
-    console.log(getLocalIP());
-    
-    const BASE_URL = process.env.BASE_URL || `http://${getLocalIP()}:8080/`;
+    const BASE_URL = `http://${getLocalIP()}:8080/` || process.env.BASE_URL;
     const excelFileURL = `${BASE_URL}${excelFileName}`;
 
     // Schedule the deletion of the file after 1 minute
@@ -1091,7 +978,7 @@ exports.downloadAmkreport = async (req, res) => {
         fs.unlinkSync(excelFilePath);
       }
       // Delete the file
-    }, 2 * 1000);
+    }, 5 * 1000);
     // Response with success message and download URL
     return responseHandler(
       req,

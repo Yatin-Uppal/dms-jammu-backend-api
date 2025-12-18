@@ -45,82 +45,75 @@ async function processResultData(assignedData, loadData, amkQuantityData) {
   return amkQuantityData.map((amkData) => {
     const { amk_number, location_33_fad } = amkData;
 
-    const assignedQuantityData = findAssignedQuantity(
+    const assignedQuantity = findAndCalculateAssignedQuantity(
       assignedData,
       amk_number,
       location_33_fad
     );
-    const assignedQuantity = calculateAssignedQuantity(
-      assignedQuantityData,
-      amk_number
-    );
 
-    const loadedQuantityData = findLoadedQuantity(
+    const loadedQuantity = findAndCalculateLoadedQuantity(
       loadData,
       amk_number,
       location_33_fad
     );
-    const loadedQuantity = calculateLoadedQuantity(loadedQuantityData);
 
     return {
       ...amkData,
-      assignedQuantity: assignedQuantity || 0,
-      loadedQuantity: loadedQuantity || 0,
-      balance: amkData.total_quantity - (loadedQuantity || 0),
+      assignedQuantity: (assignedQuantity || 0).toFixed(2),
+      loadedQuantity: (loadedQuantity || 0).toFixed(2),
+      balance: (amkData.total_quantity - (loadedQuantity || 0)).toFixed(2),
     };
   });
 }
 
-function findAssignedQuantity(assignedData, amk_number, location_33_fad) {
-  return assignedData.find((item) =>
-    item.sktvarityData.some((sktVarityData) =>
-      sktVarityData.varityData.some(
-        (varityData) =>
-          varityData.amk_number === amk_number && item.name === location_33_fad
-      )
-    )
-  );
-}
+function findAndCalculateAssignedQuantity(assignedData, amk_number, location_33_fad) {
+  let total = 0;
 
-function calculateAssignedQuantity(assignedQuantityData, amk_number) {
-  return (
-    assignedQuantityData &&
-    assignedQuantityData.sktvarityData.reduce((acc, sktVarityData) => {
-      const assignedVarityData = sktVarityData.varityData.find(
-        (varityData) => varityData.amk_number === amk_number
-      );
-      if (assignedVarityData) {
-        acc += assignedVarityData.qty * assignedVarityData.number_of_package;
+  for (const item of assignedData) {
+    if (item.name !== location_33_fad) continue;
+
+    const sktVarities = item.sktvarityData;
+    if (!sktVarities) continue;
+
+    for (const skt of sktVarities) {
+      const varieties = skt.varityData;
+      if (!varieties) continue;
+
+      for (const variety of varieties) {
+        if (variety.amk_number === amk_number) {
+          total += Number(variety.qty || 0);
+        }
       }
-      return acc;
-    }, 0)
-  );
+    }
+  }
+
+  return total || null;
 }
 
-function findLoadedQuantity(loadData, amk_number, location_33_fad) {
-  return loadData.find((item) =>
-    item.sktvarityData.some((sktVarityData) =>
-      sktVarityData.varityData.some(
-        (varityData) =>
-          varityData.amk_number === amk_number && item.name === location_33_fad
-      )
-    )
-  );
-}
+function findAndCalculateLoadedQuantity(data, amk_number, location_33_fad) {
+  let total = 0;
 
-function calculateLoadedQuantity(loadedQuantityData) {
-  return (
-    loadedQuantityData &&
-    loadedQuantityData.sktvarityData.reduce((acc, sktVarityData) => {
-      const loadedData = sktVarityData.sktVarietyLotData.find(
-        (loadData) => loadData.skt_variety_id === sktVarityData.variety_id
+  for (const item of data) {
+    if (item.name !== location_33_fad) continue;
+
+    for (const skt of item.sktvarityData ?? []) {
+      // check if this skt variety matches the AMK
+      const hasAmk = skt.varityData?.some(
+        variety => variety.amk_number === amk_number
       );
-      if (loadedData) {
-        acc += Number(loadedData.lot_quantity);
+
+      if (!hasAmk) continue;
+
+      // sum only LOADED lots
+      for (const lot of skt.sktVarietyLotData ?? []) {
+        if (lot.load_status === 'Loaded') {
+          total += Number(lot.lot_quantity || 0);
+        }
       }
-      return acc;
-    }, 0)
-  );
+    }
+  }
+
+  return total;
 }
 
 async function getAMKUploadSheets(whereClause, limit, offset, page) {

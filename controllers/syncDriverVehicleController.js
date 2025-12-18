@@ -48,6 +48,10 @@ exports.getDriverListNotLoaded = async (req, res) => {
         // Wait for all LTS data promises to resolve
         const ltsData = await Promise.all(ltsDataPromises);
 
+        if (ltsData.some((lts) => lts === null)) {
+          return null;
+        }
+
         return {
           ...driver.toJSON(),
           ltsData,

@@ -47,28 +47,14 @@ router.get(
 )
 
 router.get(
-    "/lot-qr-details/:lts_id",
+    "/lot-qr-details",
     authMiddleware.verifyAccessToken,
-    [
-        param("lts_id")
-            .notEmpty()
-            .withMessage("LTS ID is required")
-            .isInt()
-            .withMessage("LTS ID must be an integer"),
-    ],
     varietiesLotsController.getLtsDetailsById
 )
 
 router.get(
-    "/variety-lot-qr-details/:variety_id",
+    "/variety-lot-qr-details",
     authMiddleware.verifyAccessToken,
-    [
-        param("variety_id")
-            .notEmpty()
-            .withMessage("Variety ID is required")
-            .isInt()
-            .withMessage("Variety ID must be an integer"),
-    ],
     varietiesLotsController.getLtsDetailsById
 )
 

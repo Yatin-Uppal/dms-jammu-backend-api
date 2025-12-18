@@ -143,8 +143,11 @@ const getLtsDetailsById = async (req, res) => {
             return responseHandler(req, res, 400, false, "Validation errors", { errors: errors.array() }, "");
         }
 
-        const lts_id = req.params.lts_id;
-        const variety_id = req.params?.variety_id ? req.params.variety_id : null;
+        const lts_id = req.query.lts_id;
+        if (!lts_id) {
+            return responseHandler(req, res, 400, false, "LTS id is required", {}, "");
+        }
+        const variety_id = req.query?.variety_id ? req.query.variety_id : null;
 
         const lotDetails = await varietiesLotsService.getLtsLotsDetail({ lts_id, variety_id });
 

@@ -596,3 +596,66 @@ exports.manageAmkQuantityImportDataAction = (username) => [
     message: `Encountered an internal server error while attempting to store ${username}'s AMK quantity data via an Excel file.`,
   },
 ];
+
+exports.qrCodeModuleAction = (username) => [
+  {
+    http_method: "POST",
+    status: 400,
+    action_performed: `${username} attempted to generate QR codes.`,
+    message: `${username} provided invalid data for generating QR codes.`,
+  },
+  {
+    http_method: "POST",
+    status: 200,
+    action_performed: `${username} attempted to generate QR codes.`,
+    message: `${username} successfully generated QR codes.`,
+  },
+  {
+    http_method: "POST",
+    status: 403,
+    action_performed: `${username} attempted to generate QR codes.`,
+    message: `${username} attempted to generate QR codes, but it already exists.`,
+  },
+  {
+    http_method: "POST",
+    status: 500,
+    action_performed: `${username} attempted to generate QR codes.`,
+    message: `${username} encountered a server error while trying to generate QR codes.`,
+  },
+  {
+    http_method: "PUT",
+    status: 400,
+    action_performed: `${username} attempted to update LOT details of a variety.`,
+    message: `${username} provided invalid data for  LOT details of a variety.`,
+  },
+  {
+    http_method: "PUT",
+    status: 200,
+    action_performed: `${username} attempted to update the  LOT details of a variety.`,
+    message: `${username} successfully updated  LOT details of a variety.`,
+  },
+  {
+    http_method: "PUT",
+    status: 500,
+    action_performed: `${username} attempted to update the LOT details of a variety.`,
+    message: `${username} encountered a server error while trying to update the LOT details of a variety.`,
+  },
+  {
+    http_method: "DELETE",
+    status: 400,
+    action_performed: `${username} attempted to delete the LOT details of a variety.`,
+    message: `The LOT and QR codes details does not exist.`,
+  },
+  {
+    http_method: "DELETE",
+    status: 200,
+    action_performed: `${username} attempted to delete the LOT details of a variety.`,
+    message: `LOT details and QR codes deleted successfully.`,
+  },
+  {
+    http_method: "DELETE",
+    status: 500,
+    action_performed: `${username} attempted to delete the  LOT details of a variety.`,
+    message: `${username} encountered a server error while trying to delete the LOT details of a variety.`,
+  },
+];

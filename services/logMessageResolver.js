@@ -11,6 +11,7 @@ const {
   manageAmkQuantity,
   manageAmkQuantityImportDataAction,
   manageSeriesAction,
+  qrCodeModuleAction,
 } = require("../modules/actionData");
 const db = require("../models");
 
@@ -207,6 +208,20 @@ const getLogMessage = async (module_name, http_method, status, req, res) => {
 
     const seriesAction = manageSeriesAction(username);
     const matchingAction = seriesAction.find(
+      (action) => action.http_method === http_method && action.status === status
+    );
+    return matchingAction
+      ? {
+          action_performed: matchingAction.action_performed,
+          message: matchingAction.message,
+        }
+      : null;
+  }
+  if (module_name === "Generate QR Codes") {
+    const username = await findUserData(req.headers.user_id);
+    const qrcodeAction = qrCodeModuleAction(username);
+
+    const matchingAction = qrcodeAction.find(
       (action) => action.http_method === http_method && action.status === status
     );
     return matchingAction
