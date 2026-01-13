@@ -572,7 +572,7 @@ exports.fetchRecords = async (req, res) => {
 exports.downloadExcel = async (req, res) => {
   try {
     const fetchData = await fetchRecordServices(req, res);
-
+        
     if (fetchData.length <= 0) {
       return responseHandler(req, res, 404, false, "No data for download.", "");
     }
@@ -738,19 +738,19 @@ exports.downloadExcel = async (req, res) => {
               sktVarityData.fad_loading_point_lp_number || ""
             );
             for (let i = 0; i < maxQtycount; i++) {
-              ltsVaritiesRow.push(sktVarityData.sktVarietyLotData?.[i]?.lot_quantity || "");
-              ltsVaritiesRow.push(sktVarityData.sktVarietyLotData?.[i]?.lot_number || "");
+              ltsVaritiesRow.push(sktVarityData.varietyLoadData?.[i]?.lot_quantity || "");
+              ltsVaritiesRow.push(sktVarityData.varietyLoadData?.[i]?.lot_number || "");
             }
             ltsVaritiesRow.push(
-              (sktVarityData?.sktVarietyLotData[0]?.LoadedUserData
+              (sktVarityData?.varietyLoadData[0]?.LoadedUserData
                 ?.first_name || "") +
               " " +
-              (sktVarityData?.sktVarietyLotData[0]?.LoadedUserData
+              (sktVarityData?.varietyLoadData[0]?.LoadedUserData
                 ?.last_name || "")
             );
             ltsVaritiesRow.push(
               formatDateToYYYYMMDD(
-                sktVarityData?.sktVarietyLotData[0]?.loaded_time
+                sktVarityData?.varietyLoadData[0]?.loaded_time
               ) || ""
             );
           });

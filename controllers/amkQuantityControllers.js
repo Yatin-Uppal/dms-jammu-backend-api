@@ -483,7 +483,7 @@ exports.getAMKQuantity = async (req, res) => {
       : null;
     const sortedColumn = req.query.sortedColumn
       ? req.query.sortedColumn
-      : null;
+      : 'amk_number';
     const page = req.query.page ? +req.query.page : 1;
     const limit = req.query.limit ? +req.query.limit : 10;
 
