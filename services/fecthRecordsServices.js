@@ -114,8 +114,8 @@ exports.fetchRecordServices = async (req, res) => {
                           order: [["id", "ASC"]],
                         },
                         {
-                          model: db.VarietiesLotDetails,
-                          as: "sktVarietyLotData",
+                          model: db.VarietyLoadDetails,
+                          as: "varietyLoadData",
                           attributes: [
                             "id",
                             "driver_vehicle_id",

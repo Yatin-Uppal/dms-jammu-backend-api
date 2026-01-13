@@ -603,9 +603,9 @@ exports.downloadExcel = async (req, res) => {
           }
           varities?.sktvarityData.length > 0 &&
             varities?.sktvarityData.forEach((varity) => {
-              if (varity?.sktVarietyLotData.length > 0) {
+              if (varity?.varietyLoadData.length > 0) {
                 let count = 0;
-                varity?.sktVarietyLotData.forEach((loadDetails) => {
+                varity?.varietyLoadData.forEach((loadDetails) => {
                   if (
                     loadDetails?.lot_number &&
                     loadDetails?.lot_quantity &&
