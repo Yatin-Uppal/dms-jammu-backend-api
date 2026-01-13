@@ -4,6 +4,7 @@ const db = require("../models");
 async function softDeleteTables() {
     const tables = [
         'AssignedLtsDetail',
+        'VarietyLoadDetails',
         'DriverVehicleDetail',
         'Log',
         'LtsDetail',

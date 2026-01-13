@@ -38,6 +38,17 @@ exports.getSktDataWithVarieties = async (sktData) => {
               "fad_loading_point_lp_number",
             ],
           });
+          const varietyLotsData = await db.VarietyLoadDetails.findAll({
+            where: {
+              skt_variety_id: variety.id,
+            },
+            attributes: [
+              ["id", "lot_id"],
+              "lot_number",
+              "lot_quantity",
+              "load_status"
+            ],
+          });
 
           // Transform variety data
           return {
@@ -47,6 +58,7 @@ exports.getSktDataWithVarieties = async (sktData) => {
             ipq: varietyData.ipq,
             package_weight: varietyData.package_weight,
             qty: varietyData.qty,
+            lot_numbers: varietyLotsData,
             number_of_package: varietyData.number_of_package,
             location_33_fad: varietyData.location_33_fad,
             fad_loading_point_lp_number:

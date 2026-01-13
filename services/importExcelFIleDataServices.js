@@ -155,7 +155,7 @@ exports.transformData = async (jsonData) => {
   return transformedData;
 };
 
-exports.storeBulkDriverData = async (bulkDriverData,userId) => {
+exports.storeBulkDriverData = async (bulkDriverData, userId) => {
   const transaction = await db.sequelize.transaction();
   // Set the timezone for the Node.js application
   try {
@@ -177,7 +177,7 @@ exports.storeBulkDriverData = async (bulkDriverData,userId) => {
           series: driverData.series || null,
           fmn_id: driverData.fmn_id || null,
           created_at: driverData.created_at || null,
-          created_by : userId,
+          created_by: userId,
         },
         {
           transaction,
@@ -193,7 +193,7 @@ exports.storeBulkDriverData = async (bulkDriverData,userId) => {
             type: lts.type || null,
             fmn_id: lts.fmn_id || null,
             created_at: driverData.created_at || new Date(),
-            created_by : userId
+            created_by: userId
           },
           {
             transaction,
@@ -236,13 +236,28 @@ exports.storeBulkDriverData = async (bulkDriverData,userId) => {
               { transaction }
             );
 
-            await db.SktVarieties.create(
+            const createdSktVariety = await db.SktVarieties.create(
               {
                 skt_id: newSkt.id,
                 variety_id: newVariety.id,
               },
               { transaction }
             );
+
+            if (variety.lot_numbers && Array.isArray(variety.lot_numbers)) {
+              for (const lot of variety.lot_numbers) {
+                await db.VarietyLoadDetails.create(
+                  {
+                    driver_vehicle_id: createdDriver.id,
+                    skt_variety_id: createdSktVariety.id,
+                    lot_number: lot.lot_number,
+                    lot_quantity: lot.lot_quantity,
+                    load_status: "Pending", // default status
+                  },
+                  { transaction }
+                );
+              }
+            }
           }
         }
       }
@@ -253,6 +268,101 @@ exports.storeBulkDriverData = async (bulkDriverData,userId) => {
   } catch (error) {
     // Rollback the transaction if an error occurs
     await transaction.rollback();
+    throw error;
+  }
+};
+
+exports.validatedAmkQuantities = async (data) => {
+  try {
+    const amkLocPairs = new Map();
+
+    // Collect requested quantities for each AMK + Location pair
+    for (const row of data) {
+      for (const lts of row.ltsData) {
+        for (const skt of lts.skts) {
+          for (const variety of skt.varieties) {
+            const key = `${skt.name}__${variety.amk_number}`;
+            if (!amkLocPairs.has(key)) {
+              amkLocPairs.set(key, {
+                amk_number: variety.amk_number,
+                location: skt.name,
+                requestedQty: 0,
+                varieties: [],
+              });
+            }
+            const pair = amkLocPairs.get(key);
+            pair.requestedQty += parseFloat(variety.qty || 0);
+            pair.varieties.push(variety);
+          }
+        }
+      }
+    }
+
+    // Fetch available lots for each pair
+    for (const [key, pair] of amkLocPairs) {
+      const amkQuantity = await db.ManageAmkQuantity.findOne({
+        where: {
+          amk_number: pair.amk_number,
+          location: pair.location,
+          [db.Sequelize.Op.or]: [
+            { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
+            { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
+          ],
+        },
+        include: [
+          {
+            model: db.AmkLotDetails,
+            as: "amkLotDetails",
+            where: {
+              [db.Sequelize.Op.or]: [
+                { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
+                { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
+              ],
+            },
+            order: [["manufacture_date", "ASC"]],
+          },
+        ],
+      });
+
+      if (!amkQuantity || parseFloat(amkQuantity.total_quantity) < pair.requestedQty) {
+        return null; // Insufficient quantity
+      }
+
+      // FIFO Allocation
+      let availableLots = amkQuantity.amkLotDetails.map((lot) => ({
+        lot_number: lot.lot_number,
+        remaining_qty: parseFloat(lot.lot_quantity),
+      }));
+
+      for (const variety of pair.varieties) {
+        let qtyToAssign = parseFloat(variety.qty || 0);
+        const assignedLots = [];
+
+        for (const lot of availableLots) {
+          if (qtyToAssign <= 0) break;
+          if (lot.remaining_qty <= 0) continue;
+
+          const take = Math.min(qtyToAssign, lot.remaining_qty);
+          assignedLots.push({
+            lot_number: lot.lot_number,
+            lot_quantity: take,
+          });
+          lot.remaining_qty -= take;
+          qtyToAssign -= take;
+        }
+
+        if (qtyToAssign > 0) {
+          // This case should ideally not happen if total_quantity was pre-validated correctly
+          // but good for safety.
+          return null;
+        }
+        variety.lot_numbers = assignedLots;
+      }
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error in validating Amk Quantities:", error);
     throw error;
   }
 };

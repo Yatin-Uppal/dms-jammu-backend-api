@@ -82,3 +82,12 @@ exports.formatexcelFileTime = () => {
   const seconds = now.getSeconds().toString().padStart(2, "0");
   return `${year}-${month}-${day}_${hours}:${minutes}:${seconds}`;
 };
+
+exports.yymmddToDate = (yymmdd) => {
+  const yy = parseInt(yymmdd.slice(0, 2), 10);
+  const mm = parseInt(yymmdd.slice(2, 4), 10) - 1;
+  const dd = parseInt(yymmdd.slice(4, 6), 10) + 1;
+
+  const year = yy < 70 ? 2000 + yy : 1900 + yy;
+  return new Date(year, mm, dd);
+};

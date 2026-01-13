@@ -13,17 +13,21 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "sheet_id",
         as: "excelSheet"
       });
+      ManageAmkQuantity.hasMany(models.AmkLotDetails, {
+        foreignKey: "amk_id",
+        as: "amkLotDetails",
+      });
     }
   }
   ManageAmkQuantity.init(
     {
-        sr_no: DataTypes.INTEGER,
-        amk_number: DataTypes.STRING(200),
-        nomenclature: DataTypes.STRING(200),
-        location_33_fad: DataTypes.STRING(200),
-        sheet_id: DataTypes.INTEGER,
-        total_quantity: DataTypes.DECIMAL(10, 2),
-        is_deleted: DataTypes.BOOLEAN,
+      amk_number: DataTypes.STRING(200),
+      nomenclature: DataTypes.STRING(200),
+      location: DataTypes.STRING(200),
+      condition: DataTypes.STRING(200),
+      sheet_id: DataTypes.INTEGER,
+      total_quantity: DataTypes.DECIMAL(10, 2),
+      is_deleted: DataTypes.BOOLEAN,
     },
     {
       sequelize,
@@ -32,7 +36,7 @@ module.exports = (sequelize, DataTypes) => {
       indexes: [
         {
           unique: true,
-          fields: ["amk_number", "is_deleted"],
+          fields: ["amk_number", "location", "is_deleted"],
           name: "unique_amk_number",
         },
       ],

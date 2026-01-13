@@ -48,10 +48,6 @@ module.exports = (sequelize, DataTypes) => {
         as: "assignedLtsData",
       });
 
-      DriverVehicleDetail.hasMany(models.VarietiesLotDetails, {
-        foreignKey: "driver_vehicle_id",
-        as: "vehicleLotsData",
-      });
     }
   }
   DriverVehicleDetail.init(

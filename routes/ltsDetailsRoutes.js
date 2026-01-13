@@ -62,7 +62,7 @@ router.put('/lts/:lts_Id', authMiddleware.verifyAccessToken,[
 ],ltsDetailsController.updateLTS);
 
     // delete lts data
-router.delete('/lts/:ltsId', authMiddleware.verifyAccessToken, ltsDetailsController.deleteLTS);
+router.delete('/lts/:lts_Id', authMiddleware.verifyAccessToken, ltsDetailsController.deleteLTS);
 
 // Add a new route to get LTS data grouped by load_telly_sheet_lts_number
 router.get('/lts/details', authMiddleware.verifyAccessToken, ltsDetailsController.getLTSDetailsGrouped);

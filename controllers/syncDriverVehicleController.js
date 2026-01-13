@@ -1,5 +1,4 @@
 const db = require("../models");
-const { v4: uuidv4 } = require("uuid");
 const responseHandler = require("../helpers/responseHandler");
 const { validationResult } = require("express-validator");
 const {

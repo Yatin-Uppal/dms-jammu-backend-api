@@ -64,6 +64,20 @@ async function deleteExistingData(driverIds, LTSIds, transaction) {
         transaction,
       });
 
+      await db.VarietyLoadDetails.destroy({
+        where: {
+          skt_variety_id: {
+            [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.variety_id),
+          },
+          [db.Sequelize.Op.and]: [
+            { loaded_by: { [db.Sequelize.Op.is]: null } },
+            { loaded_time: { [db.Sequelize.Op.is]: null } },
+          ]
+        },
+        transaction,
+        paranoid: true, // Enable soft delete by using the paranoid option
+      });
+
       // Delete SKT_varieties associated with the found SKT IDs
       await db.SktVarieties.destroy({
         where: {
@@ -84,16 +98,6 @@ async function deleteExistingData(driverIds, LTSIds, transaction) {
         },
         transaction,
         paranoid: true, // Enable soft delete by using the paranoid option
-      });
-
-      await db.VarietiesLotDetails.destroy({
-        where: {
-          // You may need to adjust this condition based on your database schema
-          skt_variety_id: {
-            [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.variety_id),
-          },
-        },
-        transaction,
       });
 
       // Delete SKTs associated with the given LTS with the paranoid option enabled

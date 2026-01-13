@@ -152,10 +152,21 @@ exports.createLTS = async (req, res) => {
             variety.fad_loading_point_lp_number || null,
         });
 
-        await db.SktVarieties.create({
+        const newSktVariety = await db.SktVarieties.create({
           skt_id: newSkt.id,
           variety_id: newVariety.id,
         });
+
+        let lotDetails = [];
+        for (const lot of variety.lot_numbers) {
+          lotDetails.push({
+            skt_variety_id: newSktVariety.id,
+            lot_number: lot.lot_number,
+            lot_quantity: lot.lot_quantity,
+            load_status: "Pending"
+          });
+        }
+        lotDetails.length > 0 && await db.VarietyLoadDetails.bulkCreate(lotDetails);
       }
 
       sktData.push(newSkt);
@@ -176,6 +187,7 @@ exports.createLTS = async (req, res) => {
       "LTS created successfully"
     );
   } catch (error) {
+    console.log("🚀 ~ :190 ~ error:", error)
     responseHandler(req,res, 500, false, "Server error", { error });
   }
 };
@@ -274,7 +286,7 @@ exports.deleteLTS = async (req, res) => {
     // Check if LTS exists
     let lts = await db.LtsDetail.findOne({
       where: {
-        id: req.params.ltsId,
+        id: req.params.lts_Id,
       },
     });
     if (!lts) {
@@ -290,7 +302,7 @@ exports.deleteLTS = async (req, res) => {
     // Check if LTS is assigned
     let checkAssigned = await db.AssignedLtsDetail.findOne({
       where: {
-        lts_issue_voucher_detail_id: req.params.ltsId,
+        lts_issue_voucher_detail_id: req.params.lts_Id,
         [db.Sequelize.Op.or]: [
           { is_deleted: { [db.Sequelize.Op.is]: null } },
           { is_deleted: { [db.Sequelize.Op.is]: false } },
@@ -310,15 +322,23 @@ exports.deleteLTS = async (req, res) => {
     // Delete existing SKTs and associated varieties
     const existingSkts = await db.SktDetails.findAll({
       where: {
-        lts_issue_voucher_detail_id: req.params.ltsId,
+        lts_issue_voucher_detail_id: req.params.lts_Id,
       },
     });
 
     const varietiesIds = await db.SktVarieties.findAll({
-      attributes: ["variety_id"],
+      attributes: ["id", "variety_id"],
       where: {
         skt_id: {
           [db.Sequelize.Op.in]: existingSkts.map((skt) => skt.id),
+        },
+      },
+    });
+
+    await db.VarietyLoadDetails.destroy({
+      where: {
+        skt_variety_id: {
+          [db.Sequelize.Op.in]: varietiesIds.map((variety) => variety.id),
         },
       },
     });
@@ -335,14 +355,14 @@ exports.deleteLTS = async (req, res) => {
     // Destroy the existing SKTs
     await db.SktDetails.destroy({
       where: {
-        lts_issue_voucher_detail_id: req.params.ltsId,
+        lts_issue_voucher_detail_id: req.params.lts_Id,
       },
     });
 
     // Delete the LTS itself
     await db.LtsDetail.destroy({
       where: {
-        id: req.params.ltsId,
+        id: req.params.lts_Id,
       },
     });
 
@@ -463,10 +483,18 @@ exports.updateLTS = async (req, res) => {
     });
 
     const varietiesIds = await db.SktVarieties.findAll({
-      attributes: ["variety_id"],
+      attributes: ["id", "variety_id"],
       where: {
         skt_id: {
           [db.Sequelize.Op.in]: existingSkts.map((skt) => skt.id),
+        },
+      },
+    });
+
+    await db.VarietyLoadDetails.destroy({
+      where: {
+        skt_variety_id: {
+          [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.id),
         },
       },
     });
@@ -516,10 +544,21 @@ exports.updateLTS = async (req, res) => {
             variety.fad_loading_point_lp_number || null,
         });
 
-        await db.SktVarieties.create({
+        const newSktVariety = await db.SktVarieties.create({
           skt_id: newSkt.id,
           variety_id: newVariety.id,
         });
+
+        let lotDetails = [];
+        for (const lot of variety.lot_numbers) {
+          lotDetails.push({
+            skt_variety_id: newSktVariety.id,
+            lot_number: lot.lot_number,
+            lot_quantity: lot.lot_quantity,
+            load_status: "Pending"
+          });
+        }
+        lotDetails.length > 0 && await db.VarietyLoadDetails.bulkCreate(lotDetails);
       }
 
       sktData.push(newSkt);

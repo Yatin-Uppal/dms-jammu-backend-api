@@ -34,10 +34,12 @@ const getLogs = async (req, res, next) => {
       whereClause.user_id = user_id;
     }
 
+    const pageInt = parseInt(page);
+    const limitInt = parseInt(limit);
     const logs = await db.Log.findAndCountAll({
       where: whereClause,
-      limit: parseInt(limit),
-      offset: (page - 1) * limit,
+      limit: limitInt,
+      offset: (pageInt - 1) * limitInt,
       order: [["created_at", "DESC"]],
       attributes: [
         "id",
@@ -71,13 +73,13 @@ const getLogs = async (req, res, next) => {
       {
         total: logs.count,
         logs: logs.rows,
-        page: parseInt(page),
-        totalPages: Math.ceil(logs.count / limit),
+        page: pageInt,
+        totalPages: Math.ceil(logs.count / limitInt),
       },
       "Activity Logs fetched Successful."
     );
   } catch (error) {
-    responseHandler(req,res, 500, false, "Server error", error, "");
+    responseHandler(req, res, 500, false, "Server error", error, "");
     next(error);
   }
 };

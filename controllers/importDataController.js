@@ -10,6 +10,7 @@ const {
   handleDataConvert,
   storeBulkDriverData,
   transformData,
+  validatedAmkQuantities,
 } = require("../services/importExcelFIleDataServices");
 exports.excelImportData = async (req, res) => {
   try {
@@ -77,11 +78,11 @@ exports.excelImportData = async (req, res) => {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
 
- // Convert sheet to JSON
- const jsonData = xlsx.utils.sheet_to_json(sheet, {
-  raw: false,
-  dateNF: "yyyy-mm-dd h:mm:ss",
-});
+    // Convert sheet to JSON
+    const jsonData = xlsx.utils.sheet_to_json(sheet, {
+      raw: false,
+      dateNF: "yyyy-mm-dd h:mm:ss",
+    });
 
 
     // Check if the sheet contains only headings (no actual data)
@@ -114,7 +115,7 @@ exports.excelImportData = async (req, res) => {
         ""
       );
     }
-     
+
     const whereClause = {
       [db.Sequelize.Op.or]: [
         { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
@@ -142,14 +143,27 @@ exports.excelImportData = async (req, res) => {
     }
 
     const transformedData = await transformData(jsonData);
-    const userId = req.headers.user_id
-    // Insert the data into the database (uncomment this if you have the logic)
-    await storeBulkDriverData(transformedData,userId);
+    const validatedData = await validatedAmkQuantities(transformedData);
+
+    if (!validatedData) {
+      return responseHandler(
+        req,
+        res,
+        400,
+        false,
+        "Insufficient quantity in AMK inventory for some varieties.",
+        {},
+        ""
+      );
+    }
+
+    const userId = req.headers.user_id;
+    // Insert the data into the database
+    await storeBulkDriverData(validatedData, userId);
 
 
-    responseHandler(req,res, 200, true, "", transformedData, "Data uploaded Successfully");
+    responseHandler(req, res, 200, true, "", validatedData, "Data uploaded Successfully");
   } catch (error) {
-    responseHandler(req,res, 500, false, "Server error", { error });
+    responseHandler(req, res, 500, false, "Server error", { error });
   }
 };
- 

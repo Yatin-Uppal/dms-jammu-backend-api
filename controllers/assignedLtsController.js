@@ -37,11 +37,28 @@ exports.assignLtsDetails = async (req, res) => {
     const { driver_vehicle_detail_id, lts_issue_voucher_detail_id, user_id } =
       req.body;
 
+    const sktVarietyData = await db.SktVarieties.findAll({
+      attributes: ["id"],
+      include: [
+        {
+          model: db.SktDetails,
+          as: "sktData",
+          attributes: ["lts_issue_voucher_detail_id"],
+          where: {
+            lts_issue_voucher_detail_id,
+          },
+        },
+
+      ],
+    });
+
+    const sktVarietyIds = sktVarietyData.map((sktVariety) => sktVariety.id);
+
     // Check if LTS details are already assigned to this driver
     const existingAssignments = await db.AssignedLtsDetail.findAll({
       where: {
         driver_vehicle_detail_id,
-     
+
       },
     });
     let updatePromises;
@@ -53,9 +70,23 @@ exports.assignLtsDetails = async (req, res) => {
           await assignment.update({
             assigned_by: user_id,
             lts_issue_voucher_detail_id: lts_issue_voucher_detail_id,
-            is_deleted : false
+            is_deleted: false
           });
+          await db.VarietyLoadDetails.update({
+            driver_vehicle_id: driver_vehicle_detail_id,
+          }, {
+            where: {
+              skt_variety_id: sktVarietyIds,
+            }
+          })
         } else {
+          await db.VarietyLoadDetails.update({
+            driver_vehicle_id: null,
+          }, {
+            where: {
+              skt_variety_id: sktVarietyIds,
+            }
+          })
           await db.AssignedLtsDetail.destroy({
             where: {
               driver_vehicle_detail_id,
@@ -71,6 +102,13 @@ exports.assignLtsDetails = async (req, res) => {
       await Promise.all(updatePromises);
     } else {
       // LTS details are not assigned, insert new records
+      await db.VarietyLoadDetails.update({
+        driver_vehicle_id: driver_vehicle_detail_id,
+      }, {
+        where: {
+          skt_variety_id: sktVarietyIds,
+        }
+      })
       await db.AssignedLtsDetail.create({
         driver_vehicle_detail_id,
         lts_issue_voucher_detail_id: lts_issue_voucher_detail_id,
@@ -90,6 +128,7 @@ exports.assignLtsDetails = async (req, res) => {
         : "LTS Unassigned successfully."
     );
   } catch (error) {
+    console.log("🚀 ~ :128 ~ error:", error)
     responseHandler(req, res, 500, false, "Server error", { error }, "");
   }
 };

@@ -48,7 +48,7 @@ exports.storeGateCheckoutData = async (bulkDriverData) => {
               { transaction }
             );
 
-            await db.SktVarieties.create(
+            const newSktVariety = await db.SktVarieties.create(
               {
                 skt_id: newSkt.id,
                 variety_id: newVariety.id,
@@ -56,22 +56,23 @@ exports.storeGateCheckoutData = async (bulkDriverData) => {
               { transaction }
             );
 
-            if (!variety.varietyLotData || variety.varietyLotData.length === 0) {
+            if (!variety.lot_numbers || variety.lot_numbers.length === 0) {
               continue;
             }
-            const lotDetails = variety.varietyLotData.map((lot) => ({
-              driver_vehicle_id: driverData.driver_id,
-              skt_variety_id: newVariety.id,
-              lot_number: lot.lot_number,
-              lot_quantity: lot.lot_quantity,
-              ...((variety.is_loaded && lot?.load_status === "Loaded") && {
+
+            let lotDetails = [];
+            for (const lot of variety.lot_numbers) {
+              lotDetails.push({
+                driver_vehicle_id: lot?.load_status === "Loaded" ? driverData.driver_id : null,
+                skt_variety_id: newSktVariety.id,
+                lot_number: lot.lot_number,
+                lot_quantity: lot.lot_quantity,
                 load_status: lot.load_status ?? "Loaded",
-                loaded_by: lot.loaded_by,
+                loaded_by: lot?.loaded_by || null,
                 loaded_time: lot.loaded_time,
-              }),
-              qr_reference_id: `?lot_number=${lot.lot_number}&qty=${lot.lot_quantity}&qr_code=${generateQrCode()}`,
-            }))
-            await db.VarietiesLotDetails.bulkCreate(lotDetails, { transaction });
+              });
+            }
+            lotDetails.length > 0 && await db.VarietyLoadDetails.bulkCreate(lotDetails, { transaction });
           }
         }
 
@@ -105,10 +106,19 @@ async function deleteExistingData(ltsId, transaction) {
     });
 
     const varietiesIds = await db.SktVarieties.findAll({
-      attributes: ["variety_id"],
+      attributes: ["id", "variety_id"],
       where: {
         skt_id: {
           [db.Sequelize.Op.in]: sktIds.map((skt) => skt.id),
+        },
+      },
+      transaction,
+    });
+
+    await db.VarietyLoadDetails.destroy({
+      where: {
+        skt_variety_id: {
+          [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.id),
         },
       },
       transaction,
@@ -128,16 +138,6 @@ async function deleteExistingData(ltsId, transaction) {
     await db.VarietyDetail.destroy({
       where: {
         id: {
-          [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.variety_id),
-        },
-      },
-      transaction,
-    });
-
-    // delete all varieties lots quantity
-    await db.VarietiesLotDetails.destroy({
-      where: {
-        skt_variety_id: {
           [db.Sequelize.Op.in]: varietiesIds.map((skt) => skt.variety_id),
         },
       },

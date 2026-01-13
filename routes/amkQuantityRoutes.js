@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const amkQuantityControllers = require("../controllers/amkQuantityControllers");
-const { body } = require("express-validator");
+const { body, param } = require("express-validator");
 const fs = require("fs");
 const path = require('path');
 const multer = require('multer');
@@ -39,17 +39,35 @@ router.post(
       .withMessage("AMK Number must be an string.")
       .isLength({ max: 200 })
       .withMessage("AMK Number must be a string of maximum 100 characters"),
-    body("location_33_fad")
+    body("location")
       .notEmpty()
       .withMessage("Location is required.")
       .isString()
       .withMessage("Location must be an string.")
       .isLength({ max: 200 })
       .withMessage("Location must be a string of maximum 100 characters"),
-    body("total_quantity").notEmpty().withMessage("Quatity is required."),
   ],
 
   amkQuantityControllers.storeAMKQuantity
+);
+
+router.post(
+  "/manage_amk_quantity/generate_lot_and_qr/:amk_id",
+  authMiddleware.verifyAccessToken,
+  [
+    param("amk_id").notEmpty().withMessage("AMK ID is required."),
+    body("*.lot_number")
+        .exists().withMessage("LOT number is required")
+        .bail()
+        .isString().withMessage("LOT number must be a string")
+        .trim(),
+
+    body("*.lot_quantity")
+        .exists().withMessage("LOT quantity is required")
+        .bail()
+        .isFloat({ gt: 0 }).withMessage("LOT quantity must be a positive number")
+  ],
+  amkQuantityControllers.updateAmkLotQuantity
 );
 
 router.put(
@@ -64,7 +82,7 @@ router.put(
       .withMessage("AMK Number must be an string.")
       .isLength({ max: 200 })
       .withMessage("AMK Number must be a string of maximum 100 characters"),
-    body("location_33_fad")
+    body("location")
       .optional()
       .notEmpty()
       .withMessage("Location is required.")
@@ -99,7 +117,7 @@ router.post(
     "/manage_amk_quantity/import-data-new",
     authMiddleware.verifyAccessToken,
     upload.single('file'),
-    amkQuantityControllers.uploadAMKQuantityNew
+    amkQuantityControllers.uploadAMKQuantity
 );
 
 router.get(
@@ -124,6 +142,12 @@ router.get(
     "/manage_amk_quantity/sheet-upload-history",
     authMiddleware.verifyAccessToken,
     amkQuantityControllers.sheetUploadHistory
+);
+
+router.get(
+    "/manage_amk_quantity/get_amk_lot_details",
+    authMiddleware.verifyAccessToken,
+    amkQuantityControllers.getAmkLotDetails
 );
 
 module.exports = router;

@@ -9,9 +9,6 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER,
       },
-      sr_no: {
-        type: Sequelize.INTEGER,
-      },
       sheet_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
@@ -28,11 +25,14 @@ module.exports = {
       nomenclature: {
         type: Sequelize.STRING(200),
       },
-      location_33_fad: {
+      location: {
         type: Sequelize.STRING(200),
       },
       total_quantity: {
         type: Sequelize.DECIMAL(10, 2),
+      },
+      condition: {
+        type: Sequelize.STRING(200),
       },
       is_deleted: {
         type: Sequelize.BOOLEAN,

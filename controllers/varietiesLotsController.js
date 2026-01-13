@@ -2,45 +2,8 @@ const responseHandler = require("../helpers/responseHandler");
 const { validationResult } = require("express-validator");
 const varietiesLotsService = require("../services/varietiesLotsServices");
 const { generateQrCode } = require("../helpers/qrCodeGenerator");
-const { getLocalIP } = require("../helpers/ipHandler");
 
-const transformLotDetails = (lotDetails) => {
-    const url = `http://${getLocalIP()}:${process.env.PORT || 8080}/` || process.env.BASE_URL;
-    const data = lotDetails.map(lts => {
-        const transformedData = lts.sktData.map(skt => {
-            return {
-                skt_id: skt.id,
-                name: skt.name,
-                sktvarietyData: skt.sktvarityData.map(variety => {
-                    return {
-                        variety_id: variety.id,
-                        amk_number: variety?.varityData[0]?.amk_number,
-                        nomenclature: variety?.varityData[0]?.nomenclature,
-                        qty: variety?.varityData[0]?.qty,
-                        ipq: variety?.varityData[0]?.ipq,
-                        package_weight: variety?.varityData[0]?.package_weight,
-                        number_of_package: variety?.varityData[0]?.number_of_package,
-                        location_33_fad: variety?.varityData[0]?.location_33_fad,
-                        fad_loading_point_lp_number: variety?.varityData[0]?.fad_loading_point_lp_number,
-                        varietyLotData: variety.sktVarietyLotData.map(lot => ({
-                            ...(typeof lot?.toJSON === "function" ? lot.toJSON() : lot),
-                            qr_reference_id: `${url}${lot.qr_reference_id}`
-                        }))
-                    }
-                })
-            }
-        })
-        return {
-            lts_id: lts.id,
-            lts_name: lts.name,
-            ...(lts.type && { lts_type: lts.type }),
-            created_at: lts?.created_at,
-            ...((lts?.createdBy?.first_name && lts?.createdBy?.last_name) && { created_by: lts?.createdBy?.first_name + " " + lts?.createdBy?.last_name }),
-            sktData: transformedData
-        }
-    })
-    return data;
-}
+
 
 const getLotDetailsList = async (req, res) => {
     try {

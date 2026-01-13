@@ -3,9 +3,6 @@ const { Op } = require("sequelize");
 const fs = require("fs")
 const responseHandler = require("../helpers/responseHandler");
 const { validationResult } = require("express-validator");
-const {
-  storeBulkAMKQuantityData,
-} = require("../services/manageAmkQuantityServices");
 const path = require("path");
 const xlsx = require("xlsx");
 const Excel = require("exceljs");
@@ -13,7 +10,9 @@ const {
   getAMKQuantityService,
   processResultData, getAMKUploadSheets,
 } = require("../services/amkQuantityService");
-const {excelTojson, validateExcelData, processRecordsInBatches} = require("../helpers/excelTojson");
+const { yymmddToDate } = require("../services/timeFormatServices");
+const { validateExcelData, processRecordsInBatches } = require("../helpers/excelTojson");
+const { generateQrCode } = require("../helpers/qrCodeGenerator");
 exports.storeAMKQuantity = async (req, res) => {
   // Validation
   const errors = validationResult(req);
@@ -32,13 +31,13 @@ exports.storeAMKQuantity = async (req, res) => {
   }
 
   try {
-    const { amk_number, location_33_fad, total_quantity, nomenclature } = req.body;
+    const { amk_number, location, condition, total_quantity, nomenclature } = req.body;
 
     // Check if the combination already exists
     const existingRecord = await db.ManageAmkQuantity.findOne({
       where: {
         amk_number,
-        location_33_fad,
+        location,
         [db.Sequelize.Op.or]: [
           { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
           { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
@@ -58,22 +57,13 @@ exports.storeAMKQuantity = async (req, res) => {
       );
     }
 
-    const maxSrNoRecord = await db.ManageAmkQuantity.findOne({
-      attributes: [[db.sequelize.fn('MAX', db.sequelize.col('sr_no')), 'maxSrNo']],
-      raw: true
-    });
-
-    const maxSrNo = maxSrNoRecord.maxSrNo || 0;
-
-    const newSrNo = maxSrNo + 1;
-
     // If the combination doesn't exist, add the data to the database
     await db.ManageAmkQuantity.create({
       amk_number,
-      location_33_fad,
+      location,
       total_quantity,
       nomenclature,
-      sr_no: newSrNo,
+      condition
     });
 
     responseHandler(req, res, 200, true, "", {}, "Data stored successfully.");
@@ -100,7 +90,7 @@ exports.updateAMKQuantity = async (req, res) => {
   }
 
   try {
-    let { amk_number, location_33_fad, total_quantity, nomenclature } = req.body;
+    let { amk_number, location, total_quantity, nomenclature, condition } = req.body;
     const { amk_id } = req.params;
 
     const existData = await db.ManageAmkQuantity.findOne({
@@ -126,16 +116,17 @@ exports.updateAMKQuantity = async (req, res) => {
     }
 
     amk_number = amk_number || existData.amk_number;
-    location_33_fad = location_33_fad || existData.location_33_fad;
-    total_quantity = total_quantity || existData.total_quantity;
-    nomenclature = nomenclature || existData.nomenclature;
+    location = location || existData.location;
+    total_quantity = existData.total_quantity;
+    nomenclature = existData.nomenclature;
+    condition = condition || existData.condition;
 
 
     // Check if the combination already exists for other records
     const existingRecord = await db.ManageAmkQuantity.findOne({
       where: {
         amk_number,
-        location_33_fad,
+        location,
         [db.Sequelize.Op.or]: [
           { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
           { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
@@ -162,9 +153,10 @@ exports.updateAMKQuantity = async (req, res) => {
     const [updatedRecord] = await db.ManageAmkQuantity.update(
       {
         amk_number,
-        location_33_fad,
+        location,
         total_quantity,
-        nomenclature
+        nomenclature,
+        condition
       },
       {
         where: {
@@ -195,6 +187,80 @@ exports.updateAMKQuantity = async (req, res) => {
     responseHandler(req, res, 500, false, "Server error", { error }, "");
   }
 };
+
+exports.updateAmkLotQuantity = async (req, res) => {
+  // Validation
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return responseHandler(
+      req,
+      res,
+      400,
+      false,
+      "Validation errors",
+      {
+        errors: errors.array(),
+      },
+      ""
+    );
+  }
+
+  try {
+    const { amk_id } = req.params;
+    const lotDetails = req.body;
+
+    const existData = await db.ManageAmkQuantity.findOne({
+      where: {
+        [db.Sequelize.Op.or]: [
+          { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
+          { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
+        ],
+        id: amk_id,
+      },
+    });
+
+    if (!existData) {
+      return responseHandler(req, res, 400, false, "AMK Quantity not found", {}, "");
+    }
+
+    await db.AmkLotDetails.destroy({
+      where: {
+        amk_id,
+        [db.Sequelize.Op.or]: [
+          { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
+          { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
+        ],
+      },
+    });
+    
+    let totalQuantity = 0; 
+    for (const lot of lotDetails) {
+      const { lot_number, lot_quantity } = lot;
+      await db.AmkLotDetails.create({
+        lot_number,
+        lot_quantity,
+        amk_id,
+        qr_code: generateQrCode(existData.location, existData.amk_number, lot_number, lot_quantity),
+        manufacture_date: yymmddToDate(lot_number?.split("/")[0]),
+      });
+      totalQuantity += Number(lot_quantity);
+    }
+    await db.ManageAmkQuantity.update(
+      {
+        total_quantity: totalQuantity,
+      },
+      {
+        where: {
+          id: amk_id,
+        },
+      }
+    );
+
+    responseHandler(req, res, 200, true, "", {}, "Lot details updated successfully");
+  } catch (error) {
+    responseHandler(req, res, 500, false, "Server error", { error }, "");
+  }
+}
 
 exports.deleteAMKQuantity = async (req, res) => {
   // Validation
@@ -238,6 +304,16 @@ exports.deleteAMKQuantity = async (req, res) => {
       }
     );
 
+    await db.AmkLotDetails.destroy({
+      where: {
+        amk_id,
+        [db.Sequelize.Op.or]: [
+          { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
+          { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
+        ],
+      },
+    });
+
     responseHandler(req, res, 200, true, "", {}, "Data deleted successfully.");
   } catch (error) {
     responseHandler(req, res, 500, false, "Server error", { error }, "");
@@ -247,17 +323,10 @@ exports.deleteAMKQuantity = async (req, res) => {
 exports.uploadAMKQuantity = async (req, res) => {
   try {
     if (!req.file) {
-      return responseHandler(
-        req,
-        res,
-        400,
-        false,
-        "No file uploaded.",
-        {},
-        "File not uploaded"
-      );
+      return res.status(400).json({ error: 'Please upload an Excel file' });
     }
 
+    const user = req.user;
     // Check for empty file
     if (req.file.size === 0) {
       return responseHandler(
@@ -271,10 +340,10 @@ exports.uploadAMKQuantity = async (req, res) => {
       );
     }
 
-    // Check the file extension to allow xlsx, xlx, and ods formats
     const allowedExtensions = [".xlsx", ".xlx"];
     const fileExtension = path.extname(req.file.originalname);
     if (!allowedExtensions.includes(fileExtension)) {
+      // Delete the file after sending the response
       return responseHandler(
         req,
         res,
@@ -286,14 +355,21 @@ exports.uploadAMKQuantity = async (req, res) => {
       );
     }
 
-    const fileBuffer = req.file.buffer;
-
-    // Read the Excel file using xlsx
-    const workbook = xlsx.read(fileBuffer, { type: "buffer" });
+    const workbook = xlsx.readFile(req.file.path);
+    const data = [];
 
     // Assuming reading the first sheet
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
 
+    // Validate the sheet required headers
+    const range = xlsx.utils.decode_range(sheet["!ref"]);
+    const headers = [];
+
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = xlsx.utils.encode_cell({ r: 0, c: C });
+      headers.push(sheet[cellAddress]?.v || "");
+    }
     // Convert sheet to JSON
     const jsonData = xlsx.utils.sheet_to_json(sheet, {
       raw: false,
@@ -302,8 +378,7 @@ exports.uploadAMKQuantity = async (req, res) => {
 
     // Check if the sheet contains only headings (no actual data)
     if (jsonData.length <= 0) {
-      return responseHandler(
-        req,
+      return responseHandler(req,
         res,
         400,
         false,
@@ -312,119 +387,52 @@ exports.uploadAMKQuantity = async (req, res) => {
         "File contains only headings"
       );
     }
-    // Insert the data into the database (uncomment this if you have the logic)
-    await storeBulkAMKQuantityData(jsonData);
 
-    responseHandler(
-      req,
-      res,
-      200,
-      true,
-      "",
-      jsonData,
-      "Data uploaded Successfully"
-    );
-  } catch (error) {
-    responseHandler(req, res, 500, false, "Server error", error);
-  }
-};
+    const errors = validateExcelData(headers, jsonData);
 
-exports.uploadAMKQuantityNew = async (req, res) => {
-    try {
-      const store_type = 'ammunition'
-      if (!req.file) {
-        return res.status(400).json({ error: 'Please upload an Excel file' });
-      }
-
-      if (!store_type) {
-        return res.status(400).json({ error: 'Store type is required' });
-      }
-
-      const user = req.user;
-      // Check for empty file
-      if (req.file.size === 0) {
-        return responseHandler(
-            req,
-            res,
-            400,
-            false,
-            "Empty file uploaded.",
-            {},
-            "Empty file"
-        );
-      }
-
-      const allowedExtensions = [".xlsx", ".xlx"];
-      const fileExtension = path.extname(req.file.originalname);
-      if (!allowedExtensions.includes(fileExtension)) {
-         // Delete the file after sending the response
-        return responseHandler(
-            req,
-            res,
-            400,
-            false,
-            "Invalid file format.",
-            {},
-            "Invalid file format"
-        );
-      }
-
-      const workbook = new Excel.Workbook();
-      await workbook.xlsx.readFile(req.file.path);
-      const worksheet = workbook.getWorksheet(1); // Get first worksheet
-      const data = [];
-
-      worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return; // Skip header row
-        data.push(excelTojson(row, store_type));
-      });
-
-      const errors = validateExcelData(data, store_type);
-
-      if (errors.length > 0) {
-        return res.status(400).json({
-          errors: errors,
-        });
-      }
-
-      let excelFileRecord;
-      try {
-          excelFileRecord = await db.AmkExcelSheets.create({
-            file_id: req.file.filename,
-            excel_file_name: req.file.originalname,
-            uploaded_by: `${user.first_name} ${user.last_name}`,
-            total_inventory_uploaded: data.length,
-            store_type: store_type,
-            is_deleted: false,
-        });
-      } catch (error) {
-        console.error('Error processing Excel data:', error);
-        return res.status(500).json({ error: 'Failed to process Excel data' });
-      }
-
-      try {
-        const result = await processRecordsInBatches(data, excelFileRecord, db, 100);
-
-        if (result.errorCount > 0) {
-          console.warn(`${result.errorCount} records had errors during processing.`);
-        }
-
-        const uploadData = {
-            totalProcessed: result.totalProcessed,
-            successCount: result.successCount,
-            data: result.results,
-            errorCount: result.errorCount,
-        };
-        return responseHandler(req, res, 200, true, "", uploadData, "Data uploaded Successfully");
-
-      } catch (error) {
-        console.error('Failed to process records:', error);
-        throw new Error("Failed to process records");
-      }
-
-    } catch (e) {
-      return responseHandler(req, res, 500, false, e, {}, "Server error");
+    if (errors.length > 0) {
+      return responseHandler(req, res, 400, false, "Invalid sheet", { errors }, "");
     }
+
+    let excelFileRecord;
+    try {
+      excelFileRecord = await db.AmkExcelSheets.create({
+        file_id: req.file.filename,
+        excel_file_name: req.file.originalname,
+        uploaded_by: `${user.first_name} ${user.last_name}`,
+        total_inventory_uploaded: jsonData.length,
+        store_type: "ammunition",
+        is_deleted: false,
+      });
+    } catch (error) {
+      console.error('Error processing Excel data:', error);
+      return res.status(500).json({ error: 'Failed to process Excel data' });
+    }
+
+    try {
+      const result = await processRecordsInBatches(jsonData, excelFileRecord, db, 100);
+
+      if (result.errorCount > 0) {
+        console.warn(`${result.errorCount} records had errors during processing.`);
+      }
+
+      const uploadData = {
+        totalProcessed: result.totalProcessed,
+        successCount: result.successCount,
+        data: result.results,
+        errorCount: result.errorCount,
+      };
+      return responseHandler(req, res, 200, true, "", uploadData, "Data uploaded Successfully");
+
+    } catch (error) {
+      console.error('Failed to process records:', error);
+      throw new Error("Failed to process records");
+    }
+
+  } catch (e) {
+    console.log("🚀 ~ :339 ~ e:", e)
+    return responseHandler(req, res, 500, false, e, {}, "Server error");
+  }
 }
 
 exports.downloadExcelFormat = async (req, res) => {
@@ -452,7 +460,7 @@ exports.downloadExcelFormat = async (req, res) => {
       bgColor: { argb: '67AE6E' } // Use ARGB format for the color
     };
 
-    const templatePath = path.join(__dirname, '../templates' , 'tech_store_format.xlsx');
+    const templatePath = path.join(__dirname, '../templates', 'tech_store_format.xlsx');
     await workbook.xlsx.writeFile(templatePath);
 
     res.download(templatePath, 'Inventory_upload_format.xlsx');
@@ -470,60 +478,29 @@ exports.getAMKQuantity = async (req, res) => {
     const amk_number = req.query.amk_number
       ? req.query.amk_number.toString()
       : null;
-    const location_33_fad = req.query.location_33_fad
-      ? req.query.location_33_fad.toString()
+    const location = req.query.location
+      ? req.query.location.toString()
       : null;
-    const total_quantity = req.query.total_quantity
-      ? req.query.total_quantity
+    const sortedColumn = req.query.sortedColumn
+      ? req.query.sortedColumn
       : null;
     const page = req.query.page ? +req.query.page : 1;
     const limit = req.query.limit ? +req.query.limit : 10;
-    const store_type = req.query.store_type ? req.query.store_type : null;
+
+    if (!["location", "amk_number"].includes(sortedColumn)) {
+      return responseHandler(req, res, 400, false, "Invalid table column for sorting", {}, "");
+    }
 
     const { amkQuantityData, totalCount, totalPage } =
       await getAMKQuantityService({
         amk_number,
-        location_33_fad,
-        total_quantity,
+        location,
+        sortedColumn,
         page,
         limit,
-        store_type,
       });
-    let assignedData = await db.SktDetails.findAll({
-      attributes: ["name"],
-      where: {
-        [db.Sequelize.Op.or]: [
-          { deleted_at: { [db.Sequelize.Op.is]: null } }, // Exclude false values
-        ],
-      },
-      include: [
-        // Include the LTS details association here
-        {
-          model: db.SktVarieties,
-          as: "sktvarityData",
-          attributes: ["id"],
-          include: [
-            {
-              model: db.VarietyDetail,
-              as: "varityData",
-              attributes: [
-                "id",
-                "amk_number",
-                "nomenclature",
-                "ipq",
-                "package_weight",
-                "qty",
-                "number_of_package",
-                "location_33_fad",
-                "fad_loading_point_lp_number",
-              ],
-            },
-          ],
-        },
-      ],
-    });
 
-    let loadData = await db.SktDetails.findAll({
+    let amkAssignedData = await db.SktDetails.findAll({
       attributes: ["name"],
       where: {
         [db.Sequelize.Op.or]: [
@@ -543,17 +520,17 @@ exports.getAMKQuantity = async (req, res) => {
               attributes: ["id", "amk_number", "qty", "number_of_package"],
             },
             {
-              model: db.VarietiesLotDetails,
-              as: "sktVarietyLotData",
-              attributes: ["id", "skt_variety_id", "lot_quantity", "load_status"],
+              model: db.VarietyLoadDetails,
+              as: "varietyLoadData",
+              attributes: ["id", "skt_variety_id", "lot_number", "lot_quantity", "load_status", "loaded_time"],
+              required: false,
             },
           ],
         },
       ],
     });
     const result = await processResultData(
-      assignedData,
-      loadData,
+      amkAssignedData,
       amkQuantityData
     );
 
@@ -566,6 +543,109 @@ exports.getAMKQuantity = async (req, res) => {
       { amkQuantityData: result, page, limit, totalCount, totalPage },
       "Amk Quantity fetched successfully"
     );
+  } catch (error) {
+    responseHandler(req, res, 500, false, "Server error", { error }, "");
+  }
+};
+
+exports.getAmkLotDetails = async (req, res) => {
+  try {
+    const location = req.query?.location || null;
+    const amk_number = req.query?.amk_number || null;
+    const isAssigning = req.query?.is_assigning || null;
+    const amkLotData = await db.ManageAmkQuantity.findAll({
+      where: {
+        ...(location && { location }),
+        ...(amk_number && { amk_number }),
+        [db.Sequelize.Op.or]: [
+          { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
+          { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
+        ],
+      },
+      attributes: ["id", "amk_number", "location", "total_quantity", "created_at"],
+      ...((location && amk_number) || isAssigning) && 
+      {
+        include: [
+          {
+            model: db.AmkLotDetails,
+            as: "amkLotDetails",
+            order: [["manufacture_date", "ASC"]]
+          }
+        ]
+      },
+      order: [["created_at", "DESC"]]
+    });
+
+    let lotQtyMap = {};
+    if ((location && amk_number) || isAssigning) {
+      const lotWiseQty = await db.VarietyLoadDetails.findAll({
+        attributes: [
+          "lot_number",
+          [
+            db.Sequelize.literal(
+              `SUM(CASE WHEN load_status = 'Pending' THEN lot_quantity ELSE 0 END)`
+            ),
+            "assigned_quantity",
+          ],
+          [
+            db.Sequelize.literal(
+              `SUM(CASE WHEN load_status != 'Pending' THEN lot_quantity ELSE 0 END)`
+            ),
+            "loaded_quantity",
+          ],
+        ],
+        group: ["lot_number"],
+        raw: true,
+      });
+  
+      lotQtyMap = lotWiseQty.reduce((acc, row) => {
+        acc[row.lot_number] = {
+          assigned_quantity: Number(row.assigned_quantity || 0),
+          loaded_quantity: Number(row.loaded_quantity || 0),
+        };
+        return acc;
+      }, {});
+    }
+  
+    const lotDetails = amkLotData.map(amk => {
+      let assignedQuantity = 0;
+      let loadedQuantity = 0;
+
+      const amkLotDetails = (location && amk_number) || isAssigning ? amk.amkLotDetails.map(lot => {
+        const lotTotals = lotQtyMap[lot.lot_number] || {
+          assigned_quantity: 0,
+          loaded_quantity: 0,
+        };
+
+        assignedQuantity += lotTotals.assigned_quantity;
+        loadedQuantity += lotTotals.loaded_quantity;
+
+        if (isAssigning && Number(lot.lot_quantity) - lotTotals.assigned_quantity === 0) {
+          return null;
+        }
+
+        return {
+          id: lot.id,
+          lot_number: lot.lot_number,
+          lot_quantity: lot.lot_quantity,
+          manufacture_date: lot.manufacture_date,
+          qr_code: lot.qr_code,
+          assigned_quantity: lotTotals.assigned_quantity.toFixed(2),
+          loaded_quantity: lotTotals.loaded_quantity.toFixed(2),
+        };
+      })?.filter(Boolean) : [];
+      
+      return {
+        id: amk.id,
+        amk_number: amk.amk_number,
+        location: amk.location,
+        total_quantity: amk.total_quantity,
+        balance_quantity: (Number(amk.total_quantity) - assignedQuantity - loadedQuantity).toFixed(2),
+        ...((location && amk_number) || isAssigning) && { amkLotDetails },
+      };
+    });
+    
+    responseHandler(req, res, 200, true, "", lotDetails, "AMK details fetched successfully");
   } catch (error) {
     responseHandler(req, res, 500, false, "Server error", { error }, "");
   }

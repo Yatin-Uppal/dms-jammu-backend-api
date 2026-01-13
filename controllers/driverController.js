@@ -13,8 +13,43 @@ const {
   formatDateToYYYYMMDD,
   formatTime,
 } = require("../services/timeFormatServices");
-const { transformLotDetails } = require("./varietiesLotsController");
 const { getLocalIP } = require("../helpers/ipHandler");
+
+const transformLotDetails = (lotDetails) => {
+  const data = lotDetails.map(lts => {
+    const transformedData = lts.sktData.map(skt => {
+      return {
+        skt_id: skt.id,
+        name: skt.name,
+        sktvarietyData: skt.sktvarityData.map(variety => {
+          return {
+            variety_id: variety.id,
+            amk_number: variety?.varityData[0]?.amk_number,
+            nomenclature: variety?.varityData[0]?.nomenclature,
+            qty: variety?.varityData[0]?.qty,
+            ipq: variety?.varityData[0]?.ipq,
+            package_weight: variety?.varityData[0]?.package_weight,
+            number_of_package: variety?.varityData[0]?.number_of_package,
+            location_33_fad: variety?.varityData[0]?.location_33_fad,
+            fad_loading_point_lp_number: variety?.varityData[0]?.fad_loading_point_lp_number,
+            varietyLotData: variety.varietyLoadData.map(lot => ({
+              ...(typeof lot?.toJSON === "function" ? lot.toJSON() : lot),
+            }))
+          }
+        })
+      }
+    })
+    return {
+      lts_id: lts.id,
+      lts_name: lts.name,
+      ...(lts.type && { lts_type: lts.type }),
+      created_at: lts?.created_at,
+      ...((lts?.createdBy?.first_name && lts?.createdBy?.last_name) && { created_by: lts?.createdBy?.first_name + " " + lts?.createdBy?.last_name }),
+      sktData: transformedData
+    }
+  })
+  return data;
+}
 
 exports.fetchDetails = async (req, res) => {
   // Validation
@@ -111,15 +146,12 @@ exports.fetchDetails = async (req, res) => {
                           ],
                         },
                         {
-                          model: db.VarietiesLotDetails,
-                          as: "sktVarietyLotData",
+                          model: db.VarietyLoadDetails,
+                          as: "varietyLoadData",
                           attributes: [
                             "id",
-                            "driver_vehicle_id",
-                            "skt_variety_id",
                             "lot_number",
                             "lot_quantity",
-                            "qr_reference_id",
                             "load_status",
                             "loaded_by",
                             "loaded_time",
@@ -211,7 +243,7 @@ exports.fetchDetails = async (req, res) => {
     if (driverData.assignedLtsData.length > 0) {
       Promise.all(
         driverData.assignedLtsData.map(async (assignedLts) => {
-          assignedLts.ltsDetail = transformLotDetails([assignedLts.ltsDetail]);
+          assignedLts.ltsDetail = transformLotDetails([assignedLts.ltsDetail])[0];
           assignedLts.isDuplicate = false;
           const match = await db.AssignedLtsDetail.findOne({
             where: {
@@ -284,7 +316,9 @@ exports.fetchRecords = async (req, res) => {
       end = "",
     } = req.query;
 
-    const offset = (page - 1) * limit;
+    const pageInt = parseInt(page);
+    const limitInt = parseInt(limit);
+    const offset = (pageInt - 1) * limitInt;
     const whereCondition = {
       ...(record_id && {
         record_id: { [Op.like]: `%${record_id}%` },
@@ -312,14 +346,14 @@ exports.fetchRecords = async (req, res) => {
     const whereForAssignLts = {
       ...(req.query.lts_issue_voucher_detail_id &&
         req.query.driver_vehicle_detail_id && {
-          lts_issue_voucher_detail_id: req.query.lts_issue_voucher_detail_id,
-        }),
+        lts_issue_voucher_detail_id: req.query.lts_issue_voucher_detail_id,
+      }),
       ...(req.query.lts_issue_voucher_detail_id &&
         req.query.driver_vehicle_detail_id && {
-          driver_vehicle_detail_id: {
-            [Op.ne]: req.query.driver_vehicle_detail_id,
-          },
-        }),
+        driver_vehicle_detail_id: {
+          [Op.ne]: req.query.driver_vehicle_detail_id,
+        },
+      }),
       [db.Sequelize.Op.or]: [
         { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
         { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
@@ -329,7 +363,7 @@ exports.fetchRecords = async (req, res) => {
     // Fetch data based on query parameters
     const driverData = await db.DriverVehicleDetail.findAndCountAll({
       where: whereCondition,
-      limit: parseInt(limit),
+      limit: limitInt,
       offset: offset,
       order: [["begin", "DESC"]],
       attributes: [
@@ -393,8 +427,9 @@ exports.fetchRecords = async (req, res) => {
                           ],
                         },
                         {
-                          model: db.VarietiesLotDetails,
-                          as: "sktVarietyLotData",
+                          model: db.VarietyLoadDetails,
+                          as: "varietyLoadData",
+                          attributes: ["id", "lot_number", "lot_quantity", "load_status"],
                         },
                       ],
                     },
@@ -513,8 +548,8 @@ exports.fetchRecords = async (req, res) => {
 
     const modifiedDriverData = {
       total_records: driverData.count,
-      limit: parseInt(limit),
-      page: parseInt(page),
+      limit: limitInt,
+      page: pageInt,
       total_pages: totalPages,
       records: driversResult,
     };
@@ -529,6 +564,7 @@ exports.fetchRecords = async (req, res) => {
       "Driver data fetched successfully!"
     );
   } catch (error) {
+    console.log("🚀 ~ :532 ~ error:", error)
     responseHandler(req, res, 500, false, "Server error", { error }, "");
   }
 };
@@ -666,11 +702,11 @@ exports.downloadExcel = async (req, res) => {
         formatDateToYYYYMMDD(record.end) || "",
         formatTime(beginDate, record.end) || "",
         (record?.beginBy?.first_name || "") +
-          " " +
-          (record?.beginBy?.last_name || ""),
+        " " +
+        (record?.beginBy?.last_name || ""),
         (record?.endBy?.first_name || "") +
-          " " +
-          (record?.endBy?.last_name || ""),
+        " " +
+        (record?.endBy?.last_name || ""),
       ];
       const driverLtsAndVarietiesRow = [];
       const ltsVaritiesRow = [];
@@ -703,14 +739,14 @@ exports.downloadExcel = async (req, res) => {
             );
             for (let i = 0; i < maxQtycount; i++) {
               ltsVaritiesRow.push(sktVarityData.sktVarietyLotData?.[i]?.lot_quantity || "");
-              ltsVaritiesRow.push(sktVarityData.sktVarietyLotData?.[i]?.lot_number  || "");
+              ltsVaritiesRow.push(sktVarityData.sktVarietyLotData?.[i]?.lot_number || "");
             }
             ltsVaritiesRow.push(
               (sktVarityData?.sktVarietyLotData[0]?.LoadedUserData
                 ?.first_name || "") +
-                " " +
-                (sktVarityData?.sktVarietyLotData[0]?.LoadedUserData
-                  ?.last_name || "")
+              " " +
+              (sktVarityData?.sktVarietyLotData[0]?.LoadedUserData
+                ?.last_name || "")
             );
             ltsVaritiesRow.push(
               formatDateToYYYYMMDD(
@@ -786,7 +822,7 @@ exports.downloadExcel = async (req, res) => {
     const excelFilePath = path.join(__dirname, "../public", excelFileName);
 
     await workbook.xlsx.writeFile(excelFilePath);
-    
+
     const URL = `http://${getLocalIP()}:8080/` || process.env.BASE_URL;
     const excelFileURL = `${URL}${excelFileName}`; // Adjust the URL as needed
 
@@ -1012,9 +1048,9 @@ exports.fetchRecordsBySeries = async (req, res) => {
         series: { [Op.like]: `%${series}%` },
       }),
       id: {
-        [db.Sequelize.Op.notIn]: [
+        [db.Sequelize.Op.in]: [
           db.Sequelize.literal(
-            `SELECT driver_vehicle_id FROM variety_load_status_details WHERE is_loaded = true`
+            `SELECT driver_vehicle_id FROM variety_load_details WHERE loaded_by IS NULL AND loaded_time IS NULL AND deleted_at IS NULL`
           ),
         ],
       },
@@ -1102,8 +1138,8 @@ exports.fetchRecordsBySeries = async (req, res) => {
                           ],
                         },
                         {
-                          model: db.VarietiesLotDetails,
-                          as: "sktVarietyLotData",
+                          model: db.VarietyLoadDetails,
+                          as: "varietyLoadData",
                           attributes: [
                             "id",
                             "driver_vehicle_id",
@@ -1195,8 +1231,14 @@ exports.fetchRecordsBySeries = async (req, res) => {
       );
     }
 
-
-  
+    driverData = driverData.map((driver) => {
+      const driverJsonData = driver.get({ plain: true });
+      driverJsonData.assignedLtsData = driverJsonData.assignedLtsData.map((assignedLts) => {
+        assignedLts.ltsDetail = transformLotDetails([assignedLts.ltsDetail])[0];
+        return assignedLts;
+      });
+      return driverJsonData;
+    });
 
     // If there is no assigned LTS data, still send a response with the driverData
     responseHandler(

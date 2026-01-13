@@ -24,7 +24,6 @@ const checkConnectionRoutes = require("./routes/checkConnectionRoutes");
 const logRoutes = require("./routes/logRoutes");
 const amkQuantityRoutes = require("./routes/amkQuantityRoutes");
 const seriesRoutes = require("./routes/seriesRouter")
-const varietiesLotsRoutes = require("./routes/varietiesLotsRoutes");
 
 const PORT = process.env.PORT || 8080;
 
@@ -68,8 +67,6 @@ app.use("/api", logRoutes);
 app.use("/api", checkConnectionRoutes);
 app.use("/api", amkQuantityRoutes);
 app.use("/api", seriesRoutes);
-app.use("/api", varietiesLotsRoutes);
-
 
 const ipAddress = process.env.SERVER_IP || getLocalIP();
 (async () => {
