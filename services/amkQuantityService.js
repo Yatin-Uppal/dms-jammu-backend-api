@@ -24,7 +24,9 @@ async function getAMKQuantityService({
     ],
   };
 
-  let rows = await db.ManageAmkQuantity.findAll({
+  let { rows, count } = await db.ManageAmkQuantity.findAndCountAll({
+    distinct: true,
+    col: "id",
     attributes: ["id", "amk_number", "location", "total_quantity", "condition", "created_at"],
     include: [
       {
@@ -40,8 +42,8 @@ async function getAMKQuantityService({
   });
 
   const data = rows.map(row => row.toJSON());
-  const totalPage = parseInt(data.length / limit) + 1;
-  return { amkQuantityData: data, totalCount: data.length, totalPage };
+  const totalPage = Math.ceil(count / limit);
+  return { amkQuantityData: data, totalCount: count, totalPage };
 }
 
 async function processResultData(amkAssignedData, amkQuantityData) {

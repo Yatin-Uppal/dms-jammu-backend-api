@@ -558,22 +558,29 @@ exports.getAmkLotDetails = async (req, res) => {
         ...(location && { location }),
         ...(amk_number && { amk_number }),
         [db.Sequelize.Op.or]: [
-          { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
-          { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
+          { is_deleted: { [db.Sequelize.Op.is]: null } },
+          { is_deleted: { [db.Sequelize.Op.is]: false } },
         ],
       },
+
       attributes: ["id", "amk_number", "location", "total_quantity", "created_at"],
-      ...((location && amk_number) || isAssigning) && 
-      {
-        include: [
-          {
-            model: db.AmkLotDetails,
-            as: "amkLotDetails",
-            order: [["manufacture_date", "ASC"]]
-          }
-        ]
-      },
-      order: [["created_at", "DESC"]]
+
+      include: ((location && amk_number) || isAssigning)
+        ? [{
+          model: db.AmkLotDetails,
+          as: "amkLotDetails",
+          required: false
+        }]
+        : [],
+
+      order: [
+        ["created_at", "DESC"],
+        ...(((location && amk_number) || isAssigning)
+          ? [[{ model: db.AmkLotDetails, as: "amkLotDetails" }, "manufacture_date", "ASC"]]
+          : [])
+      ],
+
+      distinct: true
     });
 
     let lotQtyMap = {};

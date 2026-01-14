@@ -319,9 +319,14 @@ exports.validatedAmkQuantities = async (data) => {
                 { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
               ],
             },
-            order: [["manufacture_date", "ASC"]],
           },
         ],
+        order: [
+          ["created_at", "DESC"],
+
+          // ORDER child records
+          [{ model: db.AmkLotDetails, as: "amkLotDetails" }, "manufacture_date", "ASC"]
+        ]
       });
 
       if (!amkQuantity || parseFloat(amkQuantity.total_quantity) < pair.requestedQty) {
