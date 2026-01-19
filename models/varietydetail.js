@@ -23,6 +23,7 @@ module.exports = (sequelize, DataTypes) => {
     ipq: DataTypes.INTEGER,
     package_weight: DataTypes.DECIMAL(10,2),
     qty: DataTypes.INTEGER,
+    qty_required: DataTypes.INTEGER,
     number_of_package: DataTypes.INTEGER,
     location_33_fad: DataTypes.STRING(200),
     fad_loading_point_lp_number: DataTypes.STRING(200),

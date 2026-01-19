@@ -4,7 +4,8 @@ const db = require("../models");
 const responseHandler = require("../helpers/responseHandler");
 const { Op } = require("sequelize");
 const { formatDateToYYYYMMDD } = require("../services/timeFormatServices");
-const {generateBatches} = require("../controllers/manageSeriesControllers")
+const { generateBatches } = require("../controllers/manageSeriesControllers");
+const { fetchDriverRecords } = require("../services/driverVehicleServices");
 
 // to get the driver list data
 exports.getDashboardListData = async (req, res) => {
@@ -30,7 +31,7 @@ exports.getDashboardListData = async (req, res) => {
     // Set default values if not provided
     const currentDate = await formatDateToYYYYMMDD(new Date());
     const formationId = fmn_id || 0;
-    const series = batches ? batches: [];
+    const series = batches ? batches : [];
 
     // Define the start and end date range
     const startDate = date_range || currentDate;
@@ -132,11 +133,21 @@ exports.getMobileDashboardListData = async (req, res) => {
       replacements: [date_range || currentDate, series],
 
     });
+    if (!results || !results.length) {
+      return responseHandler(req, res, 404, false, "No Data Found", [], "");
+    }
+    const driverIds = results.map((driver) => driver.id);
+    const whereCondition = {
+      id: {
+        [Op.in]: driverIds
+      }
+    };
     // Process the results as needed
-    const responseData = results; // Assuming the stored procedure returns the data you need
+    const { data: driversResult, count } = await fetchDriverRecords(whereCondition);
 
-    responseHandler(req,res, 200, true, "", responseData, "Dashboard list fetched successfully");
+    responseHandler(req,res, 200, true, "", driversResult, "Dashboard list fetched successfully");
   } catch (error) {
-    responseHandler(req,res, 500, false, "Server error", { error }, "");
+    console.log("🚀 ~ error:", error);
+    responseHandler(req, res, 500, false, "Server error", { error: error.message }, "");
   }
 };

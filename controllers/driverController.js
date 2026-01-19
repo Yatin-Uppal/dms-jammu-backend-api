@@ -3,9 +3,9 @@ const responseHandler = require("../helpers/responseHandler");
 const { validationResult } = require("express-validator");
 const { Op } = require("sequelize");
 const {
-  fetchRecordServices,
   fetchAmkListrecords,
 } = require("../services/fecthRecordsServices");
+const { fetchDriverRecords } = require("../services/driverVehicleServices");
 const exceljs = require("exceljs");
 const path = require("path");
 const fs = require("fs");
@@ -27,6 +27,7 @@ const transformLotDetails = (lotDetails) => {
             amk_number: variety?.varityData[0]?.amk_number,
             nomenclature: variety?.varityData[0]?.nomenclature,
             qty: variety?.varityData[0]?.qty,
+            qty_required: variety?.varityData[0]?.qty_required,
             ipq: variety?.varityData[0]?.ipq,
             package_weight: variety?.varityData[0]?.package_weight,
             number_of_package: variety?.varityData[0]?.number_of_package,
@@ -140,6 +141,7 @@ exports.fetchDetails = async (req, res) => {
                             "ipq",
                             "package_weight",
                             "qty",
+                            "qty_required",
                             "number_of_package",
                             "location_33_fad",
                             "fad_loading_point_lp_number",
@@ -360,183 +362,18 @@ exports.fetchRecords = async (req, res) => {
       ],
     };
 
-    // Fetch data based on query parameters
-    const driverData = await db.DriverVehicleDetail.findAndCountAll({
-      where: whereCondition,
-      limit: limitInt,
-      offset: offset,
-      order: [["begin", "DESC"]],
-      attributes: [
-        "id",
-        "record_id",
-        "vehicle_type_id",
-        "vehicle_number_ba_number",
-        "vehicle_capacity",
-        "driver_name",
-        "driver_id_card_number",
-        "escort_number_rank_name",
-        "id_card_number_adhar_number_dc_number",
-        "unit",
-        "series",
-        "fmn_id",
-        "begin",
-        "end",
-        "begin_by",
-        "end_by",
-        "resource",
-        "title",
-        "created_at",
-      ],
-      include: [
-        {
-          model: db.AssignedLtsDetail,
-          as: "assignedLtsData",
-          attributes: [
-            "id",
-            "driver_vehicle_detail_id",
-            "lts_issue_voucher_detail_id",
-            "assigned_by",
-            "is_loaded",
-            "created_at",
-          ],
-          where: whereForAssignLts,
-          include: [
-            {
-              model: db.LtsDetail,
-              as: "ltsDetail",
-              attributes: ["id", "name", "lts_date_and_time", "type"],
-              include: [
-                {
-                  model: db.SktDetails,
-                  as: "sktData",
-                  attributes: ["id", "name"],
-                  include: [
-                    {
-                      model: db.SktVarieties,
-                      as: "sktvarityData",
-                      attributes: ["id", "variety_id", "skt_id"],
-                      include: [
-                        {
-                          model: db.VarietyDetail,
-                          as: "varityData",
-                          attributes: [
-                            "id",
-                            "amk_number",
-                            "nomenclature",
-                            "qty"
-                          ],
-                        },
-                        {
-                          model: db.VarietyLoadDetails,
-                          as: "varietyLoadData",
-                          attributes: ["id", "lot_number", "lot_quantity", "load_status"],
-                        },
-                      ],
-                    },
-                  ],
-                }
-              ]
-            },
-          ],
-        },
-        {
-          model: db.VehicleType,
-          as: "vehicleType",
-          attributes: ["id", "vehicle_type", "description"],
-        },
-        {
-          model: db.formations,
-          as: "formation_details",
-          attributes: ["id", "formation_name"],
-        },
-        {
-          model: db.User,
-          as: "beginBy",
-          attributes: ["id", "username", "first_name", "last_name"],
-          include: [
-            {
-              model: db.Role,
-              as: "role_data",
-              attributes: ["id", "role"],
-            },
-          ],
-        },
-        {
-          model: db.User,
-          as: "endBy",
-          attributes: ["id", "username", "first_name", "last_name"],
-          include: [
-            {
-              model: db.Role,
-              as: "role_data",
-              attributes: ["id", "role"],
-            },
-          ],
-        },
-      ],
-    });
+    const { data: driversResult, count } = await fetchDriverRecords(
+      whereCondition,
+      whereForAssignLts,
+      limitInt,
+      offset
+    );
 
-    const allAssignedLtsDetails = await db.AssignedLtsDetail.findAll({
-      where: {
-        [db.Sequelize.Op.or]: [
-          { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
-          { is_deleted: { [db.Sequelize.Op.is]: false } }, // Exclude false values
-        ],
-      },
-    });
-
-    // Create a map to store lts_issue_voucher_detail_id to driver_vehicle_detail_id mapping
-    const ltsDetailIds = {};
-
-    // Iterate through allAssignedLtsDetails and populate the map
-    for (const ltsData of allAssignedLtsDetails) {
-      const ltsIssueVoucherDetailId = ltsData.lts_issue_voucher_detail_id;
-      const driverVehicleDetailId = ltsData.driver_vehicle_detail_id;
-
-      // Store the driver_vehicle_detail_id for each lts_issue_voucher_detail_id
-      if (!ltsDetailIds[ltsIssueVoucherDetailId]) {
-        ltsDetailIds[ltsIssueVoucherDetailId] = [driverVehicleDetailId];
-      } else {
-        ltsDetailIds[ltsIssueVoucherDetailId].push(driverVehicleDetailId);
-      }
-    }
-
-    // Iterate through the driverData rows and check for duplicates
-    let driversResult = driverData.rows.map(row => row.toJSON());
-
-    // Build transformed result
-    driversResult = driversResult.map(row => {
-      const assignedLtsData = row.assignedLtsData || [];
-      let isDuplicate = false;
-
-      const transformedAssigned = assignedLtsData.map(ltsData => {
-        const voucherId = ltsData.lts_issue_voucher_detail_id;
-
-        // Duplicate logic
-        if (ltsDetailIds[voucherId] && ltsDetailIds[voucherId].length > 1) {
-          isDuplicate = true;
-        }
-
-        // Transform LOT details (always pure JSON now)
-        return {
-          ...ltsData,
-          ltsDetail: transformLotDetails([ltsData.ltsDetail])[0],
-        };
-      });
-
-      return {
-        ...row,
-        assignedLtsData: transformedAssigned,
-        isDuplicate,
-      };
-    });
-
-
-    if (!driverData) {
+    if (!driversResult || driversResult.length <= 0) {
       return responseHandler(
         req,
         res,
-        404,
+        400,
         false,
         "Driver data not found",
         {},
@@ -544,10 +381,10 @@ exports.fetchRecords = async (req, res) => {
       );
     }
 
-    const totalPages = Math.ceil(driverData.count / limit);
+    const totalPages = Math.ceil(count / limit);
 
     const modifiedDriverData = {
-      total_records: driverData.count,
+      total_records: count,
       limit: limitInt,
       page: pageInt,
       total_pages: totalPages,
@@ -564,7 +401,6 @@ exports.fetchRecords = async (req, res) => {
       "Driver data fetched successfully!"
     );
   } catch (error) {
-    console.log("🚀 ~ :532 ~ error:", error)
     responseHandler(req, res, 500, false, "Server error", { error }, "");
   }
 };
@@ -1132,6 +968,7 @@ exports.fetchRecordsBySeries = async (req, res) => {
                             "ipq",
                             "package_weight",
                             "qty",
+                            "qty_required",
                             "number_of_package",
                             "location_33_fad",
                             "fad_loading_point_lp_number",

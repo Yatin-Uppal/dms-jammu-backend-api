@@ -146,6 +146,7 @@ exports.createLTS = async (req, res) => {
           ipq: variety.ipq || null,
           package_weight: variety.package_weight || null,
           qty: variety.qty || null,
+          qty_required: variety.qty_required || null,
           number_of_package: variety.number_of_package || null,
           location_33_fad: variety.location_33_fad || null,
           fad_loading_point_lp_number:
@@ -255,6 +256,11 @@ exports.getLTSDetailsById = async (req, res) => {
     });
 
     const isLTSAssigned = !!checkAssigned;
+    const isLTSLoaded = checkAssigned && checkAssigned.is_loaded === true;
+
+    if (isLTSAssigned && isLTSLoaded) {
+      return responseHandler(req, res, 400, false, "Loaded LTS cannot be edited.", {}, "");
+    }
 
     const sktData = await getSktData(lts.id);
     // Initialize an array to store the transformed skt data
@@ -538,6 +544,7 @@ exports.updateLTS = async (req, res) => {
           ipq: variety.ipq || null,
           package_weight: variety.package_weight || null,
           qty: variety.qty || null,
+          qty_required: variety.qty_required || null,
           number_of_package: variety.number_of_package || null,
           location_33_fad: variety.location_33_fad || null,
           fad_loading_point_lp_number:

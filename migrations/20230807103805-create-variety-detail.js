@@ -24,6 +24,9 @@ module.exports = {
       qty: {
         type: Sequelize.INTEGER,
       },
+      qty_required: {
+        type: Sequelize.INTEGER,
+      },
       number_of_package: {
         type: Sequelize.INTEGER,
       },
