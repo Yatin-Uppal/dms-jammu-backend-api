@@ -64,7 +64,7 @@ exports.storeGateCheckoutData = async (bulkDriverData) => {
             let lotDetails = [];
             for (const lot of variety.lot_numbers) {
               lotDetails.push({
-                driver_vehicle_id: lot?.load_status === "Loaded" ? driverData.driver_id : null,
+                driver_vehicle_id: lot?.load_status !== "Pending" ? driverData.driver_id : null,
                 skt_variety_id: newSktVariety.id,
                 lot_number: lot.lot_number,
                 lot_quantity: lot.lot_quantity,

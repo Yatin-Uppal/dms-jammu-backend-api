@@ -590,7 +590,7 @@ exports.getAmkLotDetails = async (req, res) => {
           "lot_number",
           [
             db.Sequelize.literal(
-              `SUM(CASE WHEN load_status = 'Pending' THEN lot_quantity ELSE 0 END)`
+              `SUM(CASE WHEN load_status = 'Pending' AND loaded_time IS NULL THEN lot_quantity ELSE 0 END)`
             ),
             "assigned_quantity",
           ],
@@ -627,9 +627,9 @@ exports.getAmkLotDetails = async (req, res) => {
         assignedQuantity += lotTotals.assigned_quantity;
         loadedQuantity += lotTotals.loaded_quantity;
 
-        if (isAssigning && Number(lot.lot_quantity) - lotTotals.assigned_quantity === 0) {
-          return null;
-        }
+        // if (isAssigning && Number(lot.lot_quantity) - lotTotals.assigned_quantity === 0) {
+        //   return null;
+        // }
 
         return {
           id: lot.id,
