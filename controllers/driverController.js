@@ -4,6 +4,7 @@ const { validationResult } = require("express-validator");
 const { Op } = require("sequelize");
 const {
   fetchAmkListrecords,
+  fetchRecordServices
 } = require("../services/fecthRecordsServices");
 const { fetchDriverRecords } = require("../services/driverVehicleServices");
 const exceljs = require("exceljs");
@@ -681,6 +682,7 @@ exports.downloadExcel = async (req, res) => {
       "Excel file generated successfully!"
     );
   } catch (error) {
+    console.log(error)
     responseHandler(
       req,
       res,
@@ -862,6 +864,7 @@ exports.downloadAmkreport = async (req, res) => {
       "Excel file generated successfully!"
     );
   } catch (error) {
+    console.log(error)
     return responseHandler(req, res, 500, true, "Server Error", {}, "");
   }
 };
