@@ -1,9 +1,9 @@
 
-import { yymmddToDate } from "../services/timeFormatServices.js";
-import { generateQrCode } from "./qrCodeGenerator.js";
+const { yymmddToDate }  = require("../services/timeFormatServices.js");
+const generateQrCode = require("./qrCodeGenerator.js");
 
 // Convert Excel row to JSON (unused)
-export const excelTojson = (row) => {
+const excelTojson = (row) => {
     let rowData = {};
     rowData["amk_number"] = row.getCell(1).value || '';
     rowData["nomenclature"] = row.getCell(2)?.value || '';
@@ -33,7 +33,7 @@ export const excelTojson = (row) => {
  * @param {Object} db - Sequelize database instance
  * @param {Number} batchSize - Number of records to process in each batch (optional)
  */
-export async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50) {
+async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50) {
     // Group data by amk and loc
     const groupedDataMap = new Map();
 
@@ -175,7 +175,7 @@ export async function processRecordsInBatches(data, excelFileRecord, db, batchSi
 }
 
 
-export const validateExcelData = (headerRow, jsonData) => {
+const validateExcelData = (headerRow, jsonData) => {
     const errors = [];
     const requiredHeaders = ["amk", "loc", "crity_lot", "qty_bal", "condition"];
     requiredHeaders.forEach((header) => {
@@ -209,3 +209,5 @@ export const validateExcelData = (headerRow, jsonData) => {
     });
     return errors;
 }  
+
+module.exports = { validateExcelData, processRecordsInBatches, excelTojson }

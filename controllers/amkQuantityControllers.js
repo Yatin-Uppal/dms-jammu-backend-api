@@ -12,7 +12,7 @@ const {
 } = require("../services/amkQuantityService");
 const { yymmddToDate } = require("../services/timeFormatServices");
 const { validateExcelData, processRecordsInBatches } = require("../helpers/excelTojson");
-const { generateQrCode } = require("../helpers/qrCodeGenerator");
+const generateQrCode = require("../helpers/qrCodeGenerator");
 exports.storeAMKQuantity = async (req, res) => {
   // Validation
   const errors = validationResult(req);

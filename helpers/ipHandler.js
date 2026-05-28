@@ -1,7 +1,7 @@
-import os from 'os'
+const os = require('os')
 
 
-export function getLocalIP() {
+function getLocalIP() {
     const interfaces = os.networkInterfaces();
     
     for (const name of Object.keys(interfaces)) {
@@ -15,3 +15,5 @@ export function getLocalIP() {
     
     return 'localhost'; // fallback
   }
+
+  module.exports = getLocalIP;

@@ -3,7 +3,7 @@ const app = express();
 const db = require("./models");
 require("dotenv").config();
 const cors = require("cors");
-const { getLocalIP } = require("./helpers/ipHandler");
+const getLocalIP  = require("./helpers/ipHandler");
 //Routes Called
 const authRoutes = require("./routes/authRoutes");
 const vehicleTypeRoutes = require("./routes/vehicleTypeRoutes");

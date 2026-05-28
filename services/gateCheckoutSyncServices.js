@@ -1,5 +1,5 @@
 const db = require("../models");
-const { generateQrCode } = require("../helpers/qrCodeGenerator");
+const generateQrCode = require("../helpers/qrCodeGenerator");
 
 exports.storeGateCheckoutData = async (bulkDriverData) => {
   const transaction = await db.sequelize.transaction();

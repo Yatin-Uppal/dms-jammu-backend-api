@@ -1,9 +1,9 @@
-import crypto from "crypto";
+const crypto =  require("crypto");
 
 // 32-byte key (store in env variable in real apps)
 const SECRET_KEY = Buffer.from(process.env.QRCODE_SECRET_KEY,"utf8");
 
-export const generateQrCode = (location, amk_number, lot_number, lot_quantity) => {
+const generateQrCode = (location, amk_number, lot_number, lot_quantity) => {
     const text = `?location=${location}&amk_number=${amk_number}&lot_number=${lot_number}&lot_quantity=${lot_quantity}`;
     
     const iv = crypto.randomBytes(12);
@@ -16,3 +16,5 @@ export const generateQrCode = (location, amk_number, lot_number, lot_quantity) =
     // iv + authTag + encrypted → Base64
     return Buffer.concat([iv, authTag, encrypted]).toString("base64");
 }
+
+module.exports = generateQrCode

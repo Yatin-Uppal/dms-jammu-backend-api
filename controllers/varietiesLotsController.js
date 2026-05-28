@@ -1,7 +1,7 @@
 const responseHandler = require("../helpers/responseHandler");
 const { validationResult } = require("express-validator");
 const varietiesLotsService = require("../services/varietiesLotsServices");
-const { generateQrCode } = require("../helpers/qrCodeGenerator");
+const generateQrCode = require("../helpers/qrCodeGenerator");
 
 
 

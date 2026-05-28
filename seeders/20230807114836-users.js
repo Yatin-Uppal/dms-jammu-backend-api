@@ -23,6 +23,8 @@ module.exports = {
           username: "gateUser",
           password: process.env.SECURITY_KEY,
           role_id: 1,
+          created_at: new Date(),
+          updated_at: new Date()
         },
         {
           first_name: "Control",
@@ -30,6 +32,8 @@ module.exports = {
           username: "controlUser",
           password: process.env.SECURITY_KEY,
           role_id: 2,
+          created_at: new Date(),
+          updated_at: new Date()
         },
         {
           first_name: "Loading",
@@ -37,6 +41,8 @@ module.exports = {
           username: "loadingUser",
           password: process.env.SECURITY_KEY,
           role_id: 3,
+          created_at: new Date(),
+          updated_at: new Date()
         },
         {
           first_name: "Admin",
@@ -44,6 +50,8 @@ module.exports = {
           username: "admin",
           password: process.env.SECURITY_KEY,
           role_id: 4,
+          created_at: new Date(),
+          updated_at: new Date()
         },
         {
           first_name: "VMA",
@@ -51,6 +59,8 @@ module.exports = {
           username: "vmaUser",
           password: process.env.SECURITY_KEY,
           role_id: 5,
+          created_at: new Date(),
+          updated_at: new Date()
         },
         {
           first_name: "DCC Admin",
@@ -58,6 +68,8 @@ module.exports = {
           username: "dccAdmin",
           password: process.env.SECURITY_KEY,
           role_id: 6,
+          created_at: new Date(),
+          updated_at: new Date()
         },
         {
           first_name: "DCC",
@@ -65,6 +77,8 @@ module.exports = {
           username: "dccUser",
           password: process.env.SECURITY_KEY,
           role_id: 7,
+          created_at: new Date(),
+          updated_at: new Date()
         },
         {
           first_name: "Location Admin",
@@ -72,6 +86,8 @@ module.exports = {
           username: "locationAdmin",
           password: process.env.SECURITY_KEY,
           role_id: 8,
+          created_at: new Date(),
+          updated_at: new Date()
         },
       ],
       {}
