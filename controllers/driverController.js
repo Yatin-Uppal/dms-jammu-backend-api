@@ -14,7 +14,7 @@ const {
   formatDateToYYYYMMDD,
   formatTime,
 } = require("../services/timeFormatServices");
-const { getLocalIP } = require("../helpers/ipHandler");
+const getLocalIP = require("../helpers/ipHandler");
 
 const transformLotDetails = (lotDetails) => {
   const data = lotDetails.map(lts => {

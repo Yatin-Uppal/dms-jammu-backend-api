@@ -1,5 +1,5 @@
 const db = require("../models");
-const { getLocalIP } = require("../helpers/ipHandler");
+const getLocalIP = require("../helpers/ipHandler");
 
 // Returns all the LTS irrespective of created LOT or not
 exports.getAllLtsList = async () => {

@@ -2,7 +2,7 @@ const db = require("../models");
 const responseHandler = require("../helpers/responseHandler");
 const { Op } = require("sequelize");
 const backupService = require("../services/backupService");
-const { getLocalIP } = require("../helpers/ipHandler");
+const getLocalIP = require("../helpers/ipHandler");
 const path = require('path');
 const fs = require("fs")
 
@@ -27,6 +27,7 @@ exports.createBackup = async (req, res) => {
         return responseHandler(req,res, 200, true, "", { dumpFile }, "Backup created successfully");
 
     } catch (error) {
+        console.log(error)
         responseHandler(req,res, 500, false, "Server error", { error }, "");
     }
 }
