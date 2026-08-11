@@ -25,6 +25,7 @@ module.exports = (sequelize, DataTypes) => {
     qty: DataTypes.INTEGER,
     qty_required: DataTypes.INTEGER,
     number_of_package: DataTypes.INTEGER,
+    amn_shelf_life: DataTypes.STRING(200),
     location_33_fad: DataTypes.STRING(200),
     fad_loading_point_lp_number: DataTypes.STRING(200),
     is_deleted : DataTypes.BOOLEAN

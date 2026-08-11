@@ -36,8 +36,9 @@ module.exports = {
     END IF; 
     set @sql = concat("select 
       f.amk_number as 'AMK NUMBER', 
-        f.nomenclature as 'NOMENCLATURE',
-        f.qty AS 'QUANTITY',
+      f.nomenclature as 'NOMENCLATURE',
+      f.amn_shelf_life as 'AMN SHELF LIFE',
+      f.qty AS 'QUANTITY',
       a.unit AS 'UNIT', 
       round(((f.qty * f.package_weight)/f.ipq)/1000, 2) as 'TONNAGE',
       g.formation_name as 'FORMATION'
@@ -50,7 +51,7 @@ module.exports = {
     join variety_details f on f.id = e.variety_id
     join formations g on a.fmn_id = g.id
     group by
-    a.unit, a.fmn_id, f.amk_number, f.qty, f.nomenclature, f.number_of_package, f.package_weight, f.ipq
+    a.unit, a.fmn_id, f.amk_number, f.qty, f.nomenclature, f.amn_shelf_life, f.number_of_package, f.package_weight, f.ipq
     ORDER BY f.amk_number;");
     
        -- Execute the dynamic SQL query

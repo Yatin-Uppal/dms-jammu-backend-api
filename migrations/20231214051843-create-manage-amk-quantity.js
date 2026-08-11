@@ -22,6 +22,9 @@ module.exports = {
       amk_number: {
         type: Sequelize.STRING(200),
       },
+      amn_shelf_life: {
+        type: Sequelize.STRING(200),
+      },
       nomenclature: {
         type: Sequelize.STRING(200),
       },
@@ -30,9 +33,6 @@ module.exports = {
       },
       total_quantity: {
         type: Sequelize.DECIMAL(10, 2),
-      },
-      condition: {
-        type: Sequelize.STRING(200),
       },
       is_deleted: {
         type: Sequelize.BOOLEAN,

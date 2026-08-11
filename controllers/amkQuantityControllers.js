@@ -31,7 +31,7 @@ exports.storeAMKQuantity = async (req, res) => {
   }
 
   try {
-    const { amk_number, location, condition, total_quantity, nomenclature } = req.body;
+    const { amk_number, amn_shelf_life, location, total_quantity, nomenclature } = req.body;
 
     // Check if the combination already exists
     const existingRecord = await db.ManageAmkQuantity.findOne({
@@ -60,10 +60,10 @@ exports.storeAMKQuantity = async (req, res) => {
     // If the combination doesn't exist, add the data to the database
     await db.ManageAmkQuantity.create({
       amk_number,
+      amn_shelf_life,
       location,
       total_quantity,
-      nomenclature,
-      condition
+      nomenclature
     });
 
     responseHandler(req, res, 200, true, "", {}, "Data stored successfully.");
@@ -90,7 +90,7 @@ exports.updateAMKQuantity = async (req, res) => {
   }
 
   try {
-    let { amk_number, location, total_quantity, nomenclature, condition } = req.body;
+    let { amk_number, amn_shelf_life, location, total_quantity, nomenclature } = req.body;
     const { amk_id } = req.params;
 
     const existData = await db.ManageAmkQuantity.findOne({
@@ -116,10 +116,10 @@ exports.updateAMKQuantity = async (req, res) => {
     }
 
     amk_number = amk_number || existData.amk_number;
+    amn_shelf_life = amn_shelf_life || existData.amn_shelf_life;
     location = location || existData.location;
     total_quantity = existData.total_quantity;
     nomenclature = existData.nomenclature;
-    condition = condition || existData.condition;
 
 
     // Check if the combination already exists for other records
@@ -153,10 +153,10 @@ exports.updateAMKQuantity = async (req, res) => {
     const [updatedRecord] = await db.ManageAmkQuantity.update(
       {
         amk_number,
+        amn_shelf_life,
         location,
         total_quantity,
-        nomenclature,
-        condition
+        nomenclature
       },
       {
         where: {
@@ -235,10 +235,12 @@ exports.updateAmkLotQuantity = async (req, res) => {
     
     let totalQuantity = 0; 
     for (const lot of lotDetails) {
-      const { lot_number, lot_quantity } = lot;
+      const { lot_number, lot_quantity, condition, pkg_type } = lot;
       await db.AmkLotDetails.create({
         lot_number,
         lot_quantity,
+        condition,
+        pkg_type,
         amk_id,
         qr_code: generateQrCode(existData.location, existData.amk_number, lot_number, lot_quantity),
         manufacture_date: yymmddToDate(lot_number?.split("/")[0]),
@@ -430,7 +432,6 @@ exports.uploadAMKQuantity = async (req, res) => {
     }
 
   } catch (e) {
-    console.log("🚀 ~ :339 ~ e:", e)
     return responseHandler(req, res, 500, false, e, {}, "Server error");
   }
 }
@@ -544,6 +545,7 @@ exports.getAMKQuantity = async (req, res) => {
       "Amk Quantity fetched successfully"
     );
   } catch (error) {
+    console.error("Error fetching AMK Quantity:", error);
     responseHandler(req, res, 500, false, "Server error", { error }, "");
   }
 };
@@ -563,7 +565,7 @@ exports.getAmkLotDetails = async (req, res) => {
         ],
       },
 
-      attributes: ["id", "amk_number", "location", "total_quantity", "created_at"],
+      attributes: ["id", "amk_number", "location", "amn_shelf_life", "total_quantity", "created_at"],
 
       include: ((location && amk_number) || isAssigning)
         ? [{
@@ -635,6 +637,8 @@ exports.getAmkLotDetails = async (req, res) => {
           id: lot.id,
           lot_number: lot.lot_number,
           lot_quantity: lot.lot_quantity,
+          condition: lot.condition,
+          pkg_type: lot.pkg_type,
           manufacture_date: lot.manufacture_date,
           qr_code: lot.qr_code,
           assigned_quantity: lotTotals.assigned_quantity.toFixed(2),
@@ -646,6 +650,7 @@ exports.getAmkLotDetails = async (req, res) => {
         id: amk.id,
         amk_number: amk.amk_number,
         location: amk.location,
+        amn_shelf_life: amk.amn_shelf_life,
         total_quantity: amk.total_quantity,
         balance_quantity: (Number(amk.total_quantity) - assignedQuantity - loadedQuantity).toFixed(2),
         ...((location && amk_number) || isAssigning) && { amkLotDetails },

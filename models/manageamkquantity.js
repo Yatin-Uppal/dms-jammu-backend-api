@@ -22,9 +22,9 @@ module.exports = (sequelize, DataTypes) => {
   ManageAmkQuantity.init(
     {
       amk_number: DataTypes.STRING(200),
+      amn_shelf_life: DataTypes.STRING(200),
       nomenclature: DataTypes.STRING(200),
       location: DataTypes.STRING(200),
-      condition: DataTypes.STRING(200),
       sheet_id: DataTypes.INTEGER,
       total_quantity: DataTypes.DECIMAL(10, 2),
       is_deleted: DataTypes.BOOLEAN,

@@ -32,6 +32,8 @@ module.exports = (sequelize, DataTypes) => {
     modelName: 'formations',
     createdAt: "created_at", // Specify the createdAt field name
     updatedAt: "updated_at", // Specify the updatedAt field name
+    deletedAt: "deleted_at", // Specify the deletedAt field name
+    paranoid: true, // Enable soft deletes
   });
   return formations;
 };

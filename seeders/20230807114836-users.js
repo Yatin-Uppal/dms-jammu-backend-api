@@ -81,8 +81,8 @@ module.exports = {
           updated_at: new Date()
         },
         {
-          first_name: "Location Admin",
-          last_name: "User",
+          first_name: "Location",
+          last_name: "Admin",
           username: "locationAdmin",
           password: process.env.SECURITY_KEY,
           role_id: 8,

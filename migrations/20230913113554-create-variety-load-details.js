@@ -31,6 +31,12 @@ module.exports = {
       lot_quantity: {
         type: Sequelize.DECIMAL(10, 2)
       },
+      pkg_type: {
+        type: Sequelize.TEXT
+      },
+      condition: {
+        type: Sequelize.TEXT
+      },
       load_status: {
         type: Sequelize.ENUM('Pending', 'Partially Loaded', 'Loaded'),
         allowNull: false,

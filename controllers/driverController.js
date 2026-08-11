@@ -27,6 +27,7 @@ const transformLotDetails = (lotDetails) => {
             variety_id: variety.id,
             amk_number: variety?.varityData[0]?.amk_number,
             nomenclature: variety?.varityData[0]?.nomenclature,
+            amn_shelf_life: variety?.varityData[0]?.amn_shelf_life,
             qty: variety?.varityData[0]?.qty,
             qty_required: variety?.varityData[0]?.qty_required,
             ipq: variety?.varityData[0]?.ipq,
@@ -139,6 +140,7 @@ exports.fetchDetails = async (req, res) => {
                             "id",
                             "amk_number",
                             "nomenclature",
+                            "amn_shelf_life",
                             "ipq",
                             "package_weight",
                             "qty",
@@ -155,6 +157,8 @@ exports.fetchDetails = async (req, res) => {
                             "id",
                             "lot_number",
                             "lot_quantity",
+                            "condition",
+                            "pkg_type",
                             "load_status",
                             "loaded_by",
                             "loaded_time",
@@ -498,6 +502,7 @@ exports.downloadExcel = async (req, res) => {
         for (let k = 1; k <= maxVarietiesCount; k++) {
           ltsHeaders.push(
             `${j}. AMK Number_${k}`,
+            `${j}. AMN Shelf Life_${k}`,
             `${j}. Nomenclature_${k}`,
             `${j}. IPQ_${k}`,
             `${j}. Package Weight_${k}`,
@@ -508,8 +513,13 @@ exports.downloadExcel = async (req, res) => {
           );
 
           for (let q = 1; q <= maxQtycount; q++) {
-            // Push Quantity and Lot Number headers based on maxQtycount
-            ltsHeaders.push(`${j}. Quantity_${k}${q}`, `${j}. Lot Number_${k}${q}`);
+            // Push Lot Number, Quantity, Condition, Type of PKG headers based on maxQtycount
+            ltsHeaders.push(
+              `${j}. Lot Number_${k}${q}`,
+              `${j}. Quantity_${k}${q}`,
+              `${j}. Condition_${k}${q}`,
+              `${j}. Type of PKG_${k}${q}`
+            );
           }
           ltsHeaders.push(`${j}. Loaded By_${k}`, `${j}. Loaded Time_${k}`);
         }
@@ -559,6 +569,7 @@ exports.downloadExcel = async (req, res) => {
           ltsVaritiesRow.push(sktData.name);
           sktData.sktvarityData.forEach((sktVarityData) => {
             ltsVaritiesRow.push(sktVarityData.varityData[0].amk_number || "");
+            ltsVaritiesRow.push(sktVarityData.varityData[0].amn_shelf_life || "");
             ltsVaritiesRow.push(sktVarityData.varityData[0].nomenclature || "");
             ltsVaritiesRow.push(sktVarityData.varityData[0].ipq || "");
             ltsVaritiesRow.push(
@@ -575,8 +586,10 @@ exports.downloadExcel = async (req, res) => {
               sktVarityData.fad_loading_point_lp_number || ""
             );
             for (let i = 0; i < maxQtycount; i++) {
-              ltsVaritiesRow.push(sktVarityData.varietyLoadData?.[i]?.lot_quantity || "");
               ltsVaritiesRow.push(sktVarityData.varietyLoadData?.[i]?.lot_number || "");
+              ltsVaritiesRow.push(sktVarityData.varietyLoadData?.[i]?.lot_quantity || "");
+              ltsVaritiesRow.push(sktVarityData.varietyLoadData?.[i]?.condition || "");
+              ltsVaritiesRow.push(sktVarityData.varietyLoadData?.[i]?.pkg_type || "");
             }
             ltsVaritiesRow.push(
               (sktVarityData?.varietyLoadData[0]?.LoadedUserData
@@ -596,9 +609,9 @@ exports.downloadExcel = async (req, res) => {
             i <= maxVarietiesCount - 1;
             i++
           ) {
-            ltsVaritiesRow.push("", "", "", "", "", "", "", "", "", "");
+            ltsVaritiesRow.push("", "", "", "", "", "", "", "", "", "", "");
             for (let i = 0; i < maxQtycount; i++) {
-              ltsVaritiesRow.push("", "");
+              ltsVaritiesRow.push("", "", "", "");
             }
           }
         });
@@ -708,6 +721,7 @@ exports.downloadAmkreport = async (req, res) => {
     const headers = [
       "Amk Number",
       "Nomenclature",
+      "AMN Shelf Life",
       "Qty",
       "Total Tonnage",
       "Unit",
@@ -729,6 +743,7 @@ exports.downloadAmkreport = async (req, res) => {
     for (const record of records) {
       const amkNumber = record["AMK NUMBER"] || "";
       const nomenclature = record["NOMENCLATURE"] || "";
+      const amnShelfLife = record["AMN SHELF LIFE"] || "";
       const qty = record["QUANTITY"] || "";
       const tonnage = record["TONNAGE"] || "";
       const unit = record["UNIT"] || "";
@@ -737,14 +752,14 @@ exports.downloadAmkreport = async (req, res) => {
       if (amkNumber !== previousAMK && previousAMK !== null) {
         // Insert a row for the total tonnage after each unique AMK number
 
-        data.push(["", "", "", totalTonnage, "", ""]);
+        data.push(["", "", "", "", totalTonnage, "", ""]);
         // Store the row number where total tonnage is inserted
         totalTonnageRow.push(data.length + 1);
 
         totalTonnage = 0;
       }
 
-      data.push([amkNumber, nomenclature, qty, tonnage, unit, formation]);
+      data.push([amkNumber, nomenclature, amnShelfLife, qty, tonnage, unit, formation]);
       totalTonnage += parseFloat(tonnage) || 0;
 
       previousAMK = amkNumber;
@@ -752,7 +767,7 @@ exports.downloadAmkreport = async (req, res) => {
 
     // Insert the last total tonnage row
     if (previousAMK !== null) {
-      data.push(["", "", "", totalTonnage, "", ""]);
+      data.push(["", "", "", "", totalTonnage, "", ""]);
       // Store the row number where the last total tonnage is inserted
       totalTonnageRow.push(data.length + 1);
     }
@@ -968,6 +983,7 @@ exports.fetchRecordsBySeries = async (req, res) => {
                             "id",
                             "amk_number",
                             "nomenclature",
+                            "amn_shelf_life",
                             "ipq",
                             "package_weight",
                             "qty",
@@ -986,6 +1002,8 @@ exports.fetchRecordsBySeries = async (req, res) => {
                             "skt_variety_id",
                             "lot_number",
                             "lot_quantity",
+                            "condition",
+                            "pkg_type",
                             "load_status",
                             "loaded_by",
                             "loaded_time",

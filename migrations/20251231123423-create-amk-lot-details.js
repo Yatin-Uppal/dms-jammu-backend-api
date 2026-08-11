@@ -25,6 +25,12 @@ module.exports = {
       lot_quantity: {
         type: Sequelize.DECIMAL(10, 2),
       },
+      condition: {
+        type: Sequelize.ENUM('SER', 'UNSE', 'RMJ', 'SEG'),
+      },
+      pkg_type: {
+        type: Sequelize.STRING(200),
+      },
       qr_code: {
         type: Sequelize.STRING(200),
       },

@@ -204,10 +204,29 @@ exports.storeBulkDriverData = async (bulkDriverData) => {
             );
 
             for (const variety of skt.varieties) {
+              let amn_shelf_life = variety.amn_shelf_life;
+              let amkQuantityRecord = null;
+              if (!amn_shelf_life) {
+                // Find matching AMK Quantity for amn_shelf_life
+                amkQuantityRecord = await db.ManageAmkQuantity.findOne({
+                  where: {
+                    amk_number: variety.amk_number,
+                    location: skt.skt_name,
+                    [db.Sequelize.Op.or]: [
+                      { is_deleted: { [db.Sequelize.Op.is]: null } },
+                      { is_deleted: { [db.Sequelize.Op.is]: false } },
+                    ],
+                  },
+                  transaction
+                });
+                amn_shelf_life = amkQuantityRecord ? amkQuantityRecord.amn_shelf_life : null;
+              }
+
               const newVariety = await db.VarietyDetail.create(
                 {
                   amk_number: variety.amk_number || null,
                   nomenclature: variety.nomenclature || null,
+                  amn_shelf_life: amn_shelf_life || null,
                   ipq: variety.ipq || null,
                   package_weight: variety.package_weight || null,
                   qty: variety.qty || null,
@@ -230,11 +249,44 @@ exports.storeBulkDriverData = async (bulkDriverData) => {
               
               let lotDetails = [];
               for (const lot of variety.lot_numbers) {
+                let condition = lot.condition;
+                let pkg_type = lot.pkg_type;
+                if (!condition || !pkg_type) {
+                  if (!amkQuantityRecord) {
+                    amkQuantityRecord = await db.ManageAmkQuantity.findOne({
+                      where: {
+                        amk_number: variety.amk_number,
+                        location: skt.skt_name,
+                        [db.Sequelize.Op.or]: [
+                          { is_deleted: { [db.Sequelize.Op.is]: null } },
+                          { is_deleted: { [db.Sequelize.Op.is]: false } },
+                        ],
+                      },
+                      transaction
+                    });
+                  }
+                  if (amkQuantityRecord) {
+                    const lotDetailRecord = await db.AmkLotDetails.findOne({
+                      where: {
+                        amk_id: amkQuantityRecord.id,
+                        lot_number: lot.lot_number,
+                      },
+                      transaction
+                    });
+                    if (lotDetailRecord) {
+                      if (!condition) condition = lotDetailRecord.condition;
+                      if (!pkg_type) pkg_type = lotDetailRecord.pkg_type;
+                    }
+                  }
+                }
+
                 lotDetails.push({
                   driver_vehicle_id: driverData.driver_id,
                   skt_variety_id: newSktVariety.id,
                   lot_number: lot.lot_number,
                   lot_quantity: lot.lot_quantity,
+                  condition: condition || null,
+                  pkg_type: pkg_type || null,
                   load_status: "Pending"
                 });
               }

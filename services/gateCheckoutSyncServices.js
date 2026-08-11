@@ -42,6 +42,7 @@ exports.storeGateCheckoutData = async (bulkDriverData) => {
                 qty: variety.qty || null,
                 qty_required: variety.qty_required || null,
                 number_of_package: variety.number_of_package || null,
+                amn_shelf_life: variety.amn_shelf_life || null,
                 location_33_fad: variety.location_33_fad || null,
                 fad_loading_point_lp_number:
                   variety.fad_loading_point_lp_number || null,
@@ -68,6 +69,9 @@ exports.storeGateCheckoutData = async (bulkDriverData) => {
                 skt_variety_id: newSktVariety.id,
                 lot_number: lot.lot_number,
                 lot_quantity: lot.lot_quantity,
+                condition: lot?.condition || "",
+                pkg_type: lot?.pkg_type || "",
+                
                 load_status: lot.load_status ?? "Loaded",
                 loaded_by: lot?.loaded_by || null,
                 loaded_time: lot.loaded_time,

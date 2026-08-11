@@ -119,6 +119,7 @@ exports.fetchDriverRecords = async (whereCondition, whereForAssignLts, limitInt,
                         attributes: [
                           "amk_number",
                           "nomenclature",
+                          "amn_shelf_life",
                           "ipq",
                           "qty",
                           "qty_required",
@@ -131,7 +132,14 @@ exports.fetchDriverRecords = async (whereCondition, whereForAssignLts, limitInt,
                       {
                         model: db.VarietyLoadDetails,
                         as: "varietyLoadData",
-                        attributes: ["id", "lot_number", "lot_quantity", "load_status"],
+                        attributes: [
+                          "id",
+                          "lot_number",
+                          "lot_quantity",
+                          "condition",
+                          "pkg_type",
+                          "load_status",
+                        ],
                       },
                     ],
                   },
@@ -200,12 +208,15 @@ exports.fetchDriverRecords = async (whereCondition, whereForAssignLts, limitInt,
           const lot_numbers = varietyLoadData.map(lot => ({
             lot_number: lot.lot_number,
             lot_quantity: lot.lot_quantity,
+            condition: lot.condition || "",
+            pkg_type: lot.pkg_type || "",
             load_status: lot.load_status
           }));
 
           return {
             amk_number: varietyDetail.amk_number,
             nomenclature: varietyDetail.nomenclature,
+            amn_shelf_life: varietyDetail.amn_shelf_life || "",
             ipq: varietyDetail.ipq,
             qty: varietyDetail.qty,
             qty_required: varietyDetail.qty_required,

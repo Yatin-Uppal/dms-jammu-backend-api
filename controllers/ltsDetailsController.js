@@ -143,6 +143,7 @@ exports.createLTS = async (req, res) => {
         newVariety = await db.VarietyDetail.create({
           amk_number: variety.amk_number || null,
           nomenclature: variety.nomenclature || null,
+          amn_shelf_life: variety.amn_shelf_life || null,
           ipq: variety.ipq || null,
           package_weight: variety.package_weight || null,
           qty: variety.qty || null,
@@ -159,11 +160,13 @@ exports.createLTS = async (req, res) => {
         });
 
         let lotDetails = [];
-        for (const lot of variety.lot_numbers) {
+        for (const lot of (variety.lot_numbers || [])) {
           lotDetails.push({
             skt_variety_id: newSktVariety.id,
             lot_number: lot.lot_number,
             lot_quantity: lot.lot_quantity,
+            condition: lot.condition || null,
+            pkg_type: lot.pkg_type || null,
             load_status: "Pending"
           });
         }
@@ -541,6 +544,7 @@ exports.updateLTS = async (req, res) => {
         const newVariety = await db.VarietyDetail.create({
           amk_number: variety.amk_number || null,
           nomenclature: variety.nomenclature || null,
+          amn_shelf_life: variety.amn_shelf_life || null,
           ipq: variety.ipq || null,
           package_weight: variety.package_weight || null,
           qty: variety.qty || null,
@@ -557,11 +561,13 @@ exports.updateLTS = async (req, res) => {
         });
 
         let lotDetails = [];
-        for (const lot of variety.lot_numbers) {
+        for (const lot of (variety.lot_numbers || [])) {
           lotDetails.push({
             skt_variety_id: newSktVariety.id,
             lot_number: lot.lot_number,
             lot_quantity: lot.lot_quantity,
+            condition: lot.condition || null,
+            pkg_type: lot.pkg_type || null,
             load_status: "Pending"
           });
         }

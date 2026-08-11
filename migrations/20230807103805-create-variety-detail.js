@@ -30,6 +30,9 @@ module.exports = {
       number_of_package: {
         type: Sequelize.INTEGER,
       },
+      amn_shelf_life: {
+        type: Sequelize.STRING(200),
+      },
       location_33_fad: {
         type: Sequelize.STRING(200),
       },

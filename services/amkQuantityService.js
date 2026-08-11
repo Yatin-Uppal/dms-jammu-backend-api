@@ -27,7 +27,7 @@ async function getAMKQuantityService({
   let { rows, count } = await db.ManageAmkQuantity.findAndCountAll({
     distinct: true,
     col: "id",
-    attributes: ["id", "amk_number", "location", "total_quantity", "condition", "created_at"],
+    attributes: ["id", "amk_number", "location", "amn_shelf_life", "total_quantity", "created_at"],
     include: [
       {
         model: db.AmkLotDetails,
@@ -48,7 +48,7 @@ async function getAMKQuantityService({
 
 async function processResultData(amkAssignedData, amkQuantityData) {
   return amkQuantityData.map((amkData) => {
-    const { id, amk_number, location, condition, total_quantity } = amkData;
+    const { id, amk_number, location, amn_shelf_life, total_quantity } = amkData;
 
     const calculatedQuantity = calculateAssignedAndLoadedQuantity(
       amkAssignedData,
@@ -59,8 +59,8 @@ async function processResultData(amkAssignedData, amkQuantityData) {
     return {
       id,
       amk_number,
+      amn_shelf_life,
       location,
-      condition,
       total_quantity,
       assigned_quantity: (calculatedQuantity.totalAssignedQuantity || 0).toFixed(2),
       loaded_quantity: (calculatedQuantity.totalLoadedQuantity || 0).toFixed(2),

@@ -324,10 +324,7 @@ exports.deleteFormation = async (req, res) => {
         );
       }
     }
-    await db.formations.update(
-      {
-        is_deleted: true,
-      },
+    await db.formations.destroy(
       {
         where: {
           id: req.params.formation_id,

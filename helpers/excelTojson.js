@@ -2,30 +2,6 @@
 const { yymmddToDate }  = require("../services/timeFormatServices.js");
 const generateQrCode = require("./qrCodeGenerator.js");
 
-// Convert Excel row to JSON (unused)
-const excelTojson = (row) => {
-    let rowData = {};
-    rowData["amk_number"] = row.getCell(1).value || '';
-    rowData["nomenclature"] = row.getCell(2)?.value || '';
-    rowData["location"] = row.getCell(3).value || '';
-    rowData["condition"] = row.getCell(4)?.value || '';
-    rowData["total_quantity"] = row.getCell(5).value || '';
-
-    let lot_numbers = [];
-    let colIndex = 6;
-    while (true) {
-        const lotValue = row.getCell(colIndex)?.value;
-        if (!lotValue || lotValue.toString().trim() === '') {
-            break;
-        }
-        lot_numbers.push(lotValue);
-        colIndex++;
-    }
-    rowData["lot_numbers"] = lot_numbers;
-
-    return rowData;
-}
-
 /**
  * Process records in batches with transaction support
  * @param {Array} data - Array of records to process
@@ -42,8 +18,8 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
         if (!groupedDataMap.has(key)) {
             groupedDataMap.set(key, {
                 amk: row.amk,
+                amn_shelf_life: row.amn_shelf_life,
                 loc: row.loc,
-                condition: row.condition || '',
                 total_quantity: 0,
                 lot_details: [],
                 sheet_id: excelFileRecord.id
@@ -54,7 +30,9 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
         group.total_quantity += qty_bal;
         group.lot_details.push({
             crity_lot: row.crity_lot,
-            qty_bal: qty_bal
+            qty_bal: qty_bal,
+            pkg_type: row.pkg_type,
+            condition: row.condition
         });
     });
 
@@ -82,9 +60,9 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
                     const amkData = {
                         amk_number: record.amk,
                         location: record.loc,
-                        condition: record.condition,
                         total_quantity: record.total_quantity,
-                        sheet_id: record.sheet_id
+                        sheet_id: record.sheet_id,
+                        amn_shelf_life: record.amn_shelf_life
                     };
 
                     // Find or create record based on amk_number AND location
@@ -106,7 +84,8 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
                         await instance.update({
                             total_quantity: Number(instance.total_quantity) + Number(record.total_quantity),
                             condition: record.condition,
-                            sheet_id: record.sheet_id
+                            sheet_id: record.sheet_id,
+                            amn_shelf_life: record.amn_shelf_life
                         }, { transaction });
 
                         // update existing lot details(add qty_bal with existing lot_quantity in db, update qr_code) to refresh them
@@ -119,7 +98,8 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
                                     lot_quantity: lot.qty_bal,
                                     qr_code: generateQrCode(record.loc, record.amk, lot.crity_lot, lot.qty_bal),
                                     manufacture_date: yymmddToDate(lot.crity_lot?.split("/")[0]),
-                                    
+                                    condition: lot.condition,
+                                    pkg_type: lot.pkg_type
                                 },
                                 transaction
                             });
@@ -138,6 +118,8 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
                             lot_quantity: lot.qty_bal,
                             qr_code: generateQrCode(record.loc, record.amk, lot.crity_lot, lot.qty_bal),
                             manufacture_date: yymmddToDate(lot.crity_lot?.split("/")[0]),
+                            condition: lot.condition,
+                            pkg_type: lot.pkg_type
                         }));
     
                         await db.AmkLotDetails.bulkCreate(lotDetails, { transaction });
@@ -177,7 +159,7 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
 
 const validateExcelData = (headerRow, jsonData) => {
     const errors = [];
-    const requiredHeaders = ["amk", "loc", "crity_lot", "qty_bal", "condition"];
+    const requiredHeaders = ["amk", "loc", "crity_lot", "qty_bal", "condition", "pkg_type", "amn_shelf_life"];
     requiredHeaders.forEach((header) => {
         if (!headerRow.includes(header)) {
             errors.push(`Please upload correct file format.`);
@@ -210,4 +192,4 @@ const validateExcelData = (headerRow, jsonData) => {
     return errors;
 }  
 
-module.exports = { validateExcelData, processRecordsInBatches, excelTojson }
+module.exports = { validateExcelData, processRecordsInBatches }

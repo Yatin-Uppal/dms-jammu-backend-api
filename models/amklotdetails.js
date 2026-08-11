@@ -15,6 +15,8 @@ module.exports = (sequelize, DataTypes) => {
             lot_number: DataTypes.STRING(200),
             lot_quantity: DataTypes.DECIMAL(10, 2),
             qr_code: DataTypes.STRING(200),
+            condition: DataTypes.ENUM('SER', 'UNSE', 'RMJ', 'SEG'),
+            pkg_type: DataTypes.STRING(200),
             manufacture_date: DataTypes.DATE,
             is_deleted: DataTypes.BOOLEAN,
         },

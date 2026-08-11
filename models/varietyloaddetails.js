@@ -33,6 +33,8 @@ module.exports = (sequelize, DataTypes) => {
     skt_variety_id: DataTypes.INTEGER,
     lot_number: DataTypes.TEXT,
     lot_quantity: DataTypes.DECIMAL(10, 2),
+    pkg_type: DataTypes.TEXT,
+    condition: DataTypes.TEXT,
     load_status: DataTypes.ENUM('Pending', 'Partially Loaded', 'Loaded'),
     loaded_by: DataTypes.INTEGER,
     loaded_time: DataTypes.DATE
