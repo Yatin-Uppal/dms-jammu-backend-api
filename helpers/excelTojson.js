@@ -1,5 +1,5 @@
 
-const { yymmddToDate }  = require("../services/timeFormatServices.js");
+const { yymmddToDate } = require("../services/timeFormatServices.js");
 const generateQrCode = require("./qrCodeGenerator.js");
 
 /**
@@ -96,7 +96,7 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
                                     amk_id: instance.id,
                                     lot_number: lot.crity_lot,
                                     lot_quantity: lot.qty_bal,
-                                    qr_code: generateQrCode(record.loc, record.amk, lot.crity_lot, lot.qty_bal),
+                                    qr_code: generateQrCode(record.loc, record.amk, lot.crity_lot, lot.qty_bal, lot.condition, lot.pkg_type),
                                     manufacture_date: yymmddToDate(lot.crity_lot?.split("/")[0]),
                                     condition: lot.condition,
                                     pkg_type: lot.pkg_type
@@ -107,7 +107,7 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
                                 const updatedQuantity = Number(lotInstance.lot_quantity) + Number(lot.qty_bal);
                                 await lotInstance.update({
                                     lot_quantity: updatedQuantity,
-                                    qr_code: generateQrCode(record.loc, record.amk, lot.crity_lot, updatedQuantity),
+                                    qr_code: generateQrCode(record.loc, record.amk, lot.crity_lot, updatedQuantity, lot.condition, lot.pkg_type),
                                 }, { transaction });
                             }
                         }
@@ -116,12 +116,12 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
                             amk_id: instance.id,
                             lot_number: lot.crity_lot,
                             lot_quantity: lot.qty_bal,
-                            qr_code: generateQrCode(record.loc, record.amk, lot.crity_lot, lot.qty_bal),
+                            qr_code: generateQrCode(record.loc, record.amk, lot.crity_lot, lot.qty_bal, lot.condition, lot.pkg_type),
                             manufacture_date: yymmddToDate(lot.crity_lot?.split("/")[0]),
                             condition: lot.condition,
                             pkg_type: lot.pkg_type
                         }));
-    
+
                         await db.AmkLotDetails.bulkCreate(lotDetails, { transaction });
                     }
 
@@ -190,6 +190,6 @@ const validateExcelData = (headerRow, jsonData) => {
         }
     });
     return errors;
-}  
+}
 
 module.exports = { validateExcelData, processRecordsInBatches }

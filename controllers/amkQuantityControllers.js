@@ -232,8 +232,8 @@ exports.updateAmkLotQuantity = async (req, res) => {
         ],
       },
     });
-    
-    let totalQuantity = 0; 
+
+    let totalQuantity = 0;
     for (const lot of lotDetails) {
       const { lot_number, lot_quantity, condition, pkg_type } = lot;
       await db.AmkLotDetails.create({
@@ -242,7 +242,7 @@ exports.updateAmkLotQuantity = async (req, res) => {
         condition,
         pkg_type,
         amk_id,
-        qr_code: generateQrCode(existData.location, existData.amk_number, lot_number, lot_quantity),
+        qr_code: generateQrCode(existData.location, existData.amk_number, lot_number, lot_quantity, condition, pkg_type),
         manufacture_date: yymmddToDate(lot_number?.split("/")[0]),
       });
       totalQuantity += Number(lot_quantity);
@@ -606,7 +606,7 @@ exports.getAmkLotDetails = async (req, res) => {
         group: ["lot_number"],
         raw: true,
       });
-  
+
       lotQtyMap = lotWiseQty.reduce((acc, row) => {
         acc[row.lot_number] = {
           assigned_quantity: Number(row.assigned_quantity || 0),
@@ -615,7 +615,7 @@ exports.getAmkLotDetails = async (req, res) => {
         return acc;
       }, {});
     }
-  
+
     const lotDetails = amkLotData.map(amk => {
       let assignedQuantity = 0;
       let loadedQuantity = 0;
@@ -645,7 +645,7 @@ exports.getAmkLotDetails = async (req, res) => {
           loaded_quantity: lotTotals.loaded_quantity.toFixed(2),
         };
       })?.filter(Boolean) : [];
-      
+
       return {
         id: amk.id,
         amk_number: amk.amk_number,
@@ -656,7 +656,7 @@ exports.getAmkLotDetails = async (req, res) => {
         ...((location && amk_number) || isAssigning) && { amkLotDetails },
       };
     });
-    
+
     responseHandler(req, res, 200, true, "", lotDetails, "AMK details fetched successfully");
   } catch (error) {
     responseHandler(req, res, 500, false, "Server error", { error }, "");

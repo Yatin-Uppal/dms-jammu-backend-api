@@ -1,11 +1,11 @@
-const crypto =  require("crypto");
+const crypto = require("crypto");
 
 // 32-byte key (store in env variable in real apps)
-const SECRET_KEY = Buffer.from(process.env.QRCODE_SECRET_KEY,"utf8");
+const SECRET_KEY = Buffer.from(process.env.QRCODE_SECRET_KEY, "utf8");
 
-const generateQrCode = (location, amk_number, lot_number, lot_quantity) => {
-    const text = `?location=${location}&amk_number=${amk_number}&lot_number=${lot_number}&lot_quantity=${lot_quantity}`;
-    
+const generateQrCode = (location, amk_number, lot_number, lot_quantity, condition, pkg_type) => {
+    const text = `?location=${location}&amk_number=${amk_number}&lot_number=${lot_number}&lot_quantity=${lot_quantity}&condition=${condition}&pkg_type=${pkg_type}`;
+
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv("aes-256-gcm", SECRET_KEY, iv);
     let encrypted = cipher.update(text, "utf8");
