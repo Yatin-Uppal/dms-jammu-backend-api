@@ -23,7 +23,8 @@ const backupRoutes = require("./routes/backupRoutes");
 const checkConnectionRoutes = require("./routes/checkConnectionRoutes");
 const logRoutes = require("./routes/logRoutes");
 const amkQuantityRoutes = require("./routes/amkQuantityRoutes");
-const seriesRoutes = require("./routes/seriesRouter")
+const seriesRoutes = require("./routes/seriesRouter");
+const armyUnitRoutes = require("./routes/armyUnitRoutes");
 
 const PORT = process.env.PORT || 8080;
 
@@ -67,6 +68,7 @@ app.use("/api", logRoutes);
 app.use("/api", checkConnectionRoutes);
 app.use("/api", amkQuantityRoutes);
 app.use("/api", seriesRoutes);
+app.use("/api", armyUnitRoutes);
 
 const ipAddress = process.env.SERVER_IP || getLocalIP();
 (async () => {
