@@ -23,4 +23,8 @@ exports.modules_actual_name = [
     function_name: "manage_amk_quantity_import_file_api",
     module_name: "Manage AMK Quantity(import file)",
   },
+  {
+    function_name: "manage_army_units_api",
+    module_name: "Manage Army Units",
+  },
 ];

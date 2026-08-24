@@ -81,4 +81,12 @@ exports.manage_qr_codes_api = [
   "/api/lot-qr-details/generate-lot-qr",
   "/api/lot-qr-details/update-lot-qr",
   "/api/delete-lots-qr-details"
-]
+];
+
+exports.manage_army_units_api = [
+  "/api/unit/save",
+  "/api/unit-list",
+  "/api/unit-complete-list",
+  "/api/unit/:unit_id",
+  "/api/unit/bulk-upload"
+];
