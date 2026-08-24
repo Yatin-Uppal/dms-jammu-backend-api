@@ -69,7 +69,7 @@ app.use("/api", amkQuantityRoutes);
 app.use("/api", seriesRoutes);
 
 const ipAddress = process.env.SERVER_IP || getLocalIP();
-const serverAp = process.env.SERVER_AP || "AP 251";
+const serverAp = process.env.SERVER_AP || "AP 253";
 process.env.SERVER_AP = serverAp;
 
 (async () => {
