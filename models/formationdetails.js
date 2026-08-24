@@ -16,9 +16,13 @@ module.exports = (sequelize, DataTypes) => {
       //   as: "formationData",
       // });
       // formations.belongsTo(models.DriverVehicleDetail, {
-      //   foreignKey: "fmn_id",
-      //   as: "formation_details",
-      // });
+//   foreignKey: "fmn_id",
+//   as: "formation_details",
+// });
+formations.hasMany(models.ArmyUnit, {
+        foreignKey: "fmn_id",
+        as: "units",
+      });
     }
   }
   formations.init({
