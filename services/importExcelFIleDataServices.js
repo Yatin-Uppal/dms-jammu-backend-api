@@ -54,28 +54,24 @@ const getFormationID = async (fmn_value) => {
   try {
     // Check if the formation already exists
     const existingFormation = await db.formations.findOne({
-      where: { formation_name: fmn_value },
+      where: {
+        formation_name: fmn_value,
+        [db.Sequelize.Op.or]: [
+          { is_deleted: { [db.Sequelize.Op.is]: null } },
+          { is_deleted: false },
+        ],
+      },
     });
 
     if (existingFormation) {
       // If the formation exists, return its fmn_id
       return existingFormation.id;
     } else {
-      // If the formation doesn't exist, create it and return its fmn_id
-      const newFormation = await db.formations.create({
-        formation_name: fmn_value,
-      });
-
-      if (newFormation) {
-        return newFormation.id;
-      } else {
-        throw new Error("Formation creation failed.");
-      }
+      return null;
     }
   } catch (error) {
-    // Handle errors, e.g., log them or throw a custom error
     console.error("Error in getFormationID:", error);
-    throw new Error("Failed to get or create formation.");
+    throw new Error("Failed to get formation.");
   }
 };
 
@@ -156,8 +152,8 @@ exports.transformData = async (jsonData) => {
   return transformedData;
 };
 
-exports.storeBulkDriverData = async (bulkDriverData, userId) => {
-  const transaction = await db.sequelize.transaction();
+exports.storeBulkDriverData = async (bulkDriverData, userId, externalTransaction = null) => {
+  const transaction = externalTransaction || (await db.sequelize.transaction());
   // Set the timezone for the Node.js application
   try {
     let record_id_counter = 1; // Initialize a counter
@@ -317,11 +313,15 @@ exports.storeBulkDriverData = async (bulkDriverData, userId) => {
       }
     }
 
-    // Commit the transaction if everything is successful
-    await transaction.commit();
+    // Commit the transaction if created internally
+    if (!externalTransaction) {
+      await transaction.commit();
+    }
   } catch (error) {
-    // Rollback the transaction if an error occurs
-    await transaction.rollback();
+    // Rollback the transaction if created internally
+    if (!externalTransaction) {
+      await transaction.rollback();
+    }
     throw error;
   }
 };
@@ -352,7 +352,7 @@ exports.validatedAmkQuantities = async (data) => {
       }
     }
 
-    // Fetch available lots for each pair
+      // Fetch available lots for each pair
     for (const [key, pair] of amkLocPairs) {
       const amkQuantity = await db.ManageAmkQuantity.findOne({
         where: {
@@ -367,6 +367,7 @@ exports.validatedAmkQuantities = async (data) => {
           {
             model: db.AmkLotDetails,
             as: "amkLotDetails",
+            required: false,
             where: {
               [db.Sequelize.Op.or]: [
                 { is_deleted: { [db.Sequelize.Op.is]: null } }, // Exclude null values
@@ -383,12 +384,8 @@ exports.validatedAmkQuantities = async (data) => {
         ]
       });
 
-      if (!amkQuantity || parseFloat(amkQuantity.total_quantity) < pair.requestedQty) {
-        return null; // Insufficient quantity
-      }
-
-      // FIFO Allocation
-      let availableLots = amkQuantity.amkLotDetails.map((lot) => ({
+      // FIFO Allocation from available lots
+      let availableLots = (amkQuantity?.amkLotDetails || []).map((lot) => ({
         lot_number: lot.lot_number,
         remaining_qty: parseFloat(lot.lot_quantity),
       }));
@@ -410,11 +407,6 @@ exports.validatedAmkQuantities = async (data) => {
           qtyToAssign -= take;
         }
 
-        if (qtyToAssign > 0) {
-          // This case should ideally not happen if total_quantity was pre-validated correctly
-          // but good for safety.
-          return null;
-        }
         variety.lot_numbers = assignedLots;
       }
     }
