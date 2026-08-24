@@ -13,6 +13,14 @@ router.post(
             .withMessage("Formation name is required")
             .isString()
             .withMessage("Formation name must be a string"),
+        body("unit_ids")
+            .optional()
+            .isArray()
+            .withMessage("unit_ids must be an array of integers"),
+        body("unit_ids.*")
+            .optional()
+            .isInt()
+            .withMessage("Each unit_id must be an integer"),
     ],
     formationController.createFormation
 )
@@ -35,6 +43,14 @@ router.put(
             .withMessage("Formation name is required")
             .isString()
             .withMessage("Formation name must be a string"),
+        body("unit_ids")
+            .optional()
+            .isArray()
+            .withMessage("unit_ids must be an array of integers"),
+        body("unit_ids.*")
+            .optional()
+            .isInt()
+            .withMessage("Each unit_id must be an integer"),
     ],
     formationController.updateForomation
 )
