@@ -76,7 +76,7 @@ function calculateAssignedAndLoadedQuantity(assignedData, amk_number, location) 
 
   for (const item of assignedData) {
     if (item.name !== location) continue;
-
+    
     const sktVarities = item.sktvarityData;
     if (!sktVarities) continue;
 
@@ -90,10 +90,9 @@ function calculateAssignedAndLoadedQuantity(assignedData, amk_number, location) 
           if (lot.load_status !== 'Pending' && lot.loaded_time) {
             totalLoadedQuantity += Number(lot.lot_quantity || 0);
           }
-          else if (lot.load_status === 'Pending' && !lot.loaded_time) {
-            totalAssignedQuantity += Number(lot.lot_quantity || 0);
-          }
         }
+            totalAssignedQuantity += Number(varieties[j].qty || 0);
+            console.log(totalAssignedQuantity, varieties, varieties[j])
       }
     }
   }

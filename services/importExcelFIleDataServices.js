@@ -131,7 +131,6 @@ exports.transformData = async (jsonData) => {
             nomenclature: row[`${i + 1}.Nomenclature` + extention] || null,
             ipq: row[`${i + 1}.IPQ` + extention] || null,
             package_weight: row[`${i + 1}.Weight` + extention] || null,
-            qty_required: row[`${i + 1}.Qty Required Nos.` + extention] || null,
             qty: row[`${i + 1}.Qty Given Nos.` + extention] || null,
             number_of_package: row[`${i + 1}.Pkg Nos` + extention] || null,
             location_33_fad: row[`${i + 1}.Name of SKT` + extention] || null,
@@ -244,7 +243,6 @@ exports.storeBulkDriverData = async (bulkDriverData, userId, externalTransaction
                 ipq: variety.ipq || null,
                 package_weight: variety.package_weight || null,
                 qty: variety.qty || null,
-                qty_required: variety.qty_required || null,
                 number_of_package: String(variety.number_of_package).includes('.') ? Math.ceil(Number(variety.number_of_package)) : variety.number_of_package || null,
                 location_33_fad: variety.location_33_fad || null,
                 fad_loading_point_lp_number:

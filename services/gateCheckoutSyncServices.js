@@ -40,7 +40,6 @@ exports.storeGateCheckoutData = async (bulkDriverData) => {
                 ipq: variety.ipq || null,
                 package_weight: variety.package_weight || null,
                 qty: variety.qty || null,
-                qty_required: variety.qty_required || null,
                 number_of_package: variety.number_of_package || null,
                 amn_shelf_life: variety.amn_shelf_life || null,
                 location_33_fad: variety.location_33_fad || null,
