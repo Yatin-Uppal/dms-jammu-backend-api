@@ -185,7 +185,6 @@ exports.createFormation = async (req, res) => {
       });
 
       let formationId;
-      console.log(existingFormation)
       let resultData;
 
       if (!existingFormation) {
