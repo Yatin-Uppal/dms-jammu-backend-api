@@ -4,12 +4,13 @@ async function getAMKQuantityService({
   amk_number,
   location,
   sortedColumn,
+  stock_status = "all",
   page,
   limit,
+  amkAssignedData = [],
 }) {
   const pageInt = parseInt(page);
   const limitInt = parseInt(limit);
-  const offset = pageInt > 1 ? (pageInt - 1) * limitInt : 0;
 
   const whereClause = {
     ...(amk_number && {
@@ -24,9 +25,8 @@ async function getAMKQuantityService({
     ],
   };
 
-  let { rows, count } = await db.ManageAmkQuantity.findAndCountAll({
+  let rows = await db.ManageAmkQuantity.findAll({
     distinct: true,
-    col: "id",
     attributes: ["id", "amk_number", "location", "amn_shelf_life", "total_quantity", "created_at"],
     include: [
       {
@@ -36,14 +36,24 @@ async function getAMKQuantityService({
       },
     ],
     where: { ...whereClause },
-    offset: offset,
-    limit: limitInt,
     order: [["created_at", "DESC"], [sortedColumn, "ASC"]],
   });
 
-  const data = rows.map(row => row.toJSON());
-  const totalPage = Math.ceil(count / limit);
-  return { amkQuantityData: data, totalCount: count, totalPage };
+  const rawData = rows.map(row => row.toJSON());
+  let processedData = await processResultData(amkAssignedData, rawData);
+
+  if (stock_status === "available_stock") {
+    processedData = processedData.filter(item => Number(item.balance_quantity) > 0);
+  } else if (stock_status === "out_of_stock") {
+    processedData = processedData.filter(item => Number(item.balance_quantity) <= 0);
+  }
+
+  const totalCount = processedData.length;
+  const totalPage = Math.ceil(totalCount / limitInt);
+  const offset = pageInt > 1 ? (pageInt - 1) * limitInt : 0;
+  const paginatedData = processedData.slice(offset, offset + limitInt);
+
+  return { amkQuantityData: paginatedData, totalCount, totalPage };
 }
 
 async function processResultData(amkAssignedData, amkQuantityData) {
@@ -84,15 +94,17 @@ function calculateAssignedAndLoadedQuantity(assignedData, amk_number, location) 
       const varieties = sktVarities[i].varityData;
       for (let j = 0; j < varieties.length; j++) {
         if (varieties[j].amk_number !== amk_number) continue;
+        
+        totalAssignedQuantity += Number(varieties[j].qty || 0);
+
         const sktVarietyLotData = sktVarities[i].varietyLoadData;
-        if (!varieties[j] || !sktVarietyLotData?.length) continue;
-        for (const lot of sktVarietyLotData) {
-          if (lot.load_status !== 'Pending' && lot.loaded_time) {
-            totalLoadedQuantity += Number(lot.lot_quantity || 0);
+        if (sktVarietyLotData?.length) {
+          for (const lot of sktVarietyLotData) {
+            if (lot.load_status !== 'Pending' && lot.loaded_time) {
+              totalLoadedQuantity += Number(lot.lot_quantity || 0);
+            }
           }
         }
-            totalAssignedQuantity += Number(varieties[j].qty || 0);
-            console.log(totalAssignedQuantity, varieties, varieties[j])
       }
     }
   }
@@ -133,5 +145,6 @@ async function getAMKUploadSheets(whereClause, limit, offset, page) {
 module.exports = {
   getAMKQuantityService,
   processResultData,
+  calculateAssignedAndLoadedQuantity,
   getAMKUploadSheets
 };

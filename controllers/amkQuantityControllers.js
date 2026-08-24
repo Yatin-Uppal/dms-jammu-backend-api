@@ -8,7 +8,9 @@ const xlsx = require("xlsx");
 const Excel = require("exceljs");
 const {
   getAMKQuantityService,
-  processResultData, getAMKUploadSheets,
+  processResultData,
+  calculateAssignedAndLoadedQuantity,
+  getAMKUploadSheets,
 } = require("../services/amkQuantityService");
 const { yymmddToDate } = require("../services/timeFormatServices");
 const { validateExcelData, processRecordsInBatches } = require("../helpers/excelTojson");
@@ -485,21 +487,15 @@ exports.getAMKQuantity = async (req, res) => {
     const sortedColumn = req.query.sortedColumn
       ? req.query.sortedColumn
       : 'amk_number';
+    const stock_status = req.query.stock_status
+      ? req.query.stock_status.toString()
+      : 'all';
     const page = req.query.page ? +req.query.page : 1;
     const limit = req.query.limit ? +req.query.limit : 10;
 
     if (!["location", "amk_number"].includes(sortedColumn)) {
       return responseHandler(req, res, 400, false, "Invalid table column for sorting", {}, "");
     }
-
-    const { amkQuantityData, totalCount, totalPage } =
-      await getAMKQuantityService({
-        amk_number,
-        location,
-        sortedColumn,
-        page,
-        limit,
-      });
 
     let amkAssignedData = await db.SktDetails.findAll({
       attributes: ["name"],
@@ -530,10 +526,17 @@ exports.getAMKQuantity = async (req, res) => {
         },
       ],
     });
-    const result = await processResultData(
-      amkAssignedData,
-      amkQuantityData
-    );
+
+    const { amkQuantityData, totalCount, totalPage } =
+      await getAMKQuantityService({
+        amk_number,
+        location,
+        sortedColumn,
+        stock_status,
+        page,
+        limit,
+        amkAssignedData,
+      });
 
     responseHandler(
       req,
@@ -541,7 +544,7 @@ exports.getAMKQuantity = async (req, res) => {
       200,
       true,
       "",
-      { amkQuantityData: result, page, limit, totalCount, totalPage },
+      { amkQuantityData, page, limit, totalCount, totalPage },
       "Amk Quantity fetched successfully"
     );
   } catch (error) {
@@ -585,6 +588,35 @@ exports.getAmkLotDetails = async (req, res) => {
       distinct: true
     });
 
+    let amkAssignedData = await db.SktDetails.findAll({
+      attributes: ["name"],
+      where: {
+        [db.Sequelize.Op.or]: [
+          { deleted_at: { [db.Sequelize.Op.is]: null } },
+        ],
+      },
+      include: [
+        {
+          model: db.SktVarieties,
+          as: "sktvarityData",
+          attributes: ["id"],
+          include: [
+            {
+              model: db.VarietyDetail,
+              as: "varityData",
+              attributes: ["id", "amk_number", "qty", "number_of_package"],
+            },
+            {
+              model: db.VarietyLoadDetails,
+              as: "varietyLoadData",
+              attributes: ["id", "skt_variety_id", "lot_number", "lot_quantity", "load_status", "loaded_time"],
+              required: false,
+            },
+          ],
+        },
+      ],
+    });
+
     let lotQtyMap = {};
     if ((location && amk_number) || isAssigning) {
       const lotWiseQty = await db.VarietyLoadDetails.findAll({
@@ -617,21 +649,20 @@ exports.getAmkLotDetails = async (req, res) => {
     }
 
     const lotDetails = amkLotData.map(amk => {
-      let assignedQuantity = 0;
-      let loadedQuantity = 0;
+      const calculatedQuantity = calculateAssignedAndLoadedQuantity(
+        amkAssignedData,
+        amk.amk_number,
+        amk.location
+      );
+
+      const assignedQuantity = calculatedQuantity.totalAssignedQuantity || 0;
+      const loadedQuantity = calculatedQuantity.totalLoadedQuantity || 0;
 
       const amkLotDetails = (location && amk_number) || isAssigning ? amk.amkLotDetails.map(lot => {
         const lotTotals = lotQtyMap[lot.lot_number] || {
           assigned_quantity: 0,
           loaded_quantity: 0,
         };
-
-        assignedQuantity += lotTotals.assigned_quantity;
-        loadedQuantity += lotTotals.loaded_quantity;
-
-        // if (isAssigning && Number(lot.lot_quantity) - lotTotals.assigned_quantity === 0) {
-        //   return null;
-        // }
 
         return {
           id: lot.id,
@@ -652,7 +683,10 @@ exports.getAmkLotDetails = async (req, res) => {
         location: amk.location,
         amn_shelf_life: amk.amn_shelf_life,
         total_quantity: amk.total_quantity,
+        assigned_quantity: assignedQuantity.toFixed(2),
+        loaded_quantity: loadedQuantity.toFixed(2),
         balance_quantity: (Number(amk.total_quantity) - assignedQuantity - loadedQuantity).toFixed(2),
+        actual_quantity: (Number(amk.total_quantity) - loadedQuantity).toFixed(2),
         ...((location && amk_number) || isAssigning) && { amkLotDetails },
       };
     });
