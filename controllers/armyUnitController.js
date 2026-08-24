@@ -596,6 +596,7 @@ exports.bulkUploadUnits = async (req, res) => {
 
       let resolvedFmnId = null;
       let targetFmnName = "Unassigned";
+      let isNewFormation = false;
 
       if (rawFormation !== undefined && rawFormation !== null && String(rawFormation).trim() !== "") {
         const formationStr = String(rawFormation).trim();
@@ -611,13 +612,9 @@ exports.bulkUploadUnits = async (req, res) => {
           resolvedFmnId = Number(formationStr);
           targetFmnName = formationMapById[resolvedFmnId];
         } else {
-          invalidFormations.push({
-            row: rowNumber,
-            unit_name: unitName,
-            formation_name: formationStr,
-            error: `Formation '${formationStr}' does not exist.`,
-          });
-          continue;
+          // Non-existing formation: mark as new formation to create
+          isNewFormation = true;
+          targetFmnName = formationStr;
         }
       }
 
@@ -626,27 +623,11 @@ exports.bulkUploadUnits = async (req, res) => {
         unit_name: unitName,
         fmn_id: resolvedFmnId,
         target_formation_name: targetFmnName,
+        is_new_formation: isNewFormation,
       });
     }
 
-    // 1. Strict Abort on Non-existing formations
-    if (invalidFormations.length > 0) {
-      return responseHandler(
-        req,
-        res,
-        400,
-        false,
-        "One or more formations specified in the Excel sheet do not exist. Please fix the Excel file before importing.",
-        {
-          errorType: "INVALID_FORMATIONS",
-          totalRows: jsonData.length,
-          invalidFormations,
-        },
-        "Invalid formations"
-      );
-    }
-
-    // 2. Missing unit names or intra-file duplicates error
+    // 1. Missing unit names or intra-file duplicates error
     if (missingUnitNames.length > 0) {
       return responseHandler(
         req,
@@ -691,6 +672,23 @@ exports.bulkUploadUnits = async (req, res) => {
       );
     }
 
+    // Identify unique formations to create
+    const formationsToCreateMap = new Map();
+    for (const row of parsedRows) {
+      if (row.is_new_formation && row.target_formation_name && row.target_formation_name !== "Unassigned") {
+        const fmnKey = row.target_formation_name.toLowerCase().trim();
+        if (!formationsToCreateMap.has(fmnKey)) {
+          formationsToCreateMap.set(fmnKey, {
+            formation_name: row.target_formation_name,
+            rowNumber: row.rowNumber,
+            action: "create_formation",
+            action_label: "Create Formation",
+          });
+        }
+      }
+    }
+    const formationsToCreate = Array.from(formationsToCreateMap.values());
+
     // Lookup existing active units in database
     const allUnitNames = parsedRows.map((r) => r.unit_name);
     const existingDbUnits = await db.ArmyUnit.findAll({
@@ -728,8 +726,9 @@ exports.bulkUploadUnits = async (req, res) => {
           current_formation_name: "None (New Unit)",
           target_formation_name: row.target_formation_name,
           fmn_id: row.fmn_id,
+          is_new_formation: row.is_new_formation,
           action: "create",
-          action_label: "Create New Unit",
+          action_label: row.is_new_formation ? "Create Unit & Formation" : "Create New Unit",
           rowNumber: row.rowNumber,
         };
         toCreate.push(item);
@@ -740,7 +739,7 @@ exports.bulkUploadUnits = async (req, res) => {
           ? existing.formationData.formation_name
           : "Unassigned";
 
-        if (currentFmnId === row.fmn_id) {
+        if (row.fmn_id && currentFmnId === row.fmn_id) {
           const item = {
             id: existing.id,
             unit_name: row.unit_name,
@@ -754,14 +753,20 @@ exports.bulkUploadUnits = async (req, res) => {
           unchanged.push(item);
           diffList.push(item);
         } else {
-          const actionLabel =
-            row.fmn_id === null ? "Unassign Formation" : "Update Formation";
+          let actionLabel =
+            row.fmn_id === null && !row.is_new_formation
+              ? "Unassign Formation"
+              : "Update Formation";
+          if (row.is_new_formation) {
+            actionLabel = "Update to New Formation";
+          }
           const item = {
             id: existing.id,
             unit_name: row.unit_name,
             current_formation_name: currentFmnName,
             target_formation_name: row.target_formation_name,
             fmn_id: row.fmn_id,
+            is_new_formation: row.is_new_formation,
             action: "update",
             action_label: actionLabel,
             rowNumber: row.rowNumber,
@@ -772,8 +777,8 @@ exports.bulkUploadUnits = async (req, res) => {
       }
     }
 
-    // If there are existing units whose formation will be changed and user hasn't confirmed yet:
-    if (toUpdate.length > 0 && !isConfirmed) {
+    // If there are new formations or existing units whose formation will be changed, and user hasn't confirmed yet:
+    if ((formationsToCreate.length > 0 || toUpdate.length > 0 || toCreate.length > 0) && !isConfirmed) {
       return responseHandler(
         req,
         res,
@@ -783,20 +788,60 @@ exports.bulkUploadUnits = async (req, res) => {
         {
           needConfirmation: true,
           totalRows: jsonData.length,
+          formationsToCreateCount: formationsToCreate.length,
+          formationsToCreate,
           toCreateCount: toCreate.length,
           toUpdateCount: toUpdate.length,
           unchangedCount: unchanged.length,
+          toCreate,
           toUpdate,
+          unchanged,
         },
-        "Existing units found with formation updates. Confirmation required."
+        "Formation and unit changes found. Confirmation required before importing."
       );
     }
 
     // Execute Import with Database Transaction
     const transaction = await db.sequelize.transaction();
     try {
-      // 1. Create new units
+      // 1. Create or reactivate missing formations
+      const resolvedFormationMap = { ...formationMapByName };
+      for (const fmn of formationsToCreate) {
+        const existingDeletedFmn = await db.formations.findOne({
+          where: {
+            formation_name: fmn.formation_name,
+            is_deleted: true,
+          },
+          transaction,
+        });
+
+        let fmnInstance;
+        if (existingDeletedFmn) {
+          await db.formations.update(
+            { is_deleted: false },
+            { where: { id: existingDeletedFmn.id }, transaction }
+          );
+          fmnInstance = existingDeletedFmn;
+        } else {
+          fmnInstance = await db.formations.create(
+            { formation_name: fmn.formation_name },
+            { transaction }
+          );
+        }
+
+        resolvedFormationMap[fmn.formation_name.toLowerCase().trim()] = fmnInstance.id;
+      }
+
+      // 2. Create new units
       for (const item of toCreate) {
+        let effectiveFmnId = item.fmn_id;
+        if (!effectiveFmnId && item.target_formation_name && item.target_formation_name !== "Unassigned") {
+          const resolvedId = resolvedFormationMap[item.target_formation_name.toLowerCase().trim()];
+          if (resolvedId) {
+            effectiveFmnId = resolvedId;
+          }
+        }
+
         await db.ArmyUnit.destroy({
           where: { unit_name: item.unit_name, is_deleted: true },
           force: true,
@@ -806,16 +851,24 @@ exports.bulkUploadUnits = async (req, res) => {
         await db.ArmyUnit.create(
           {
             unit_name: item.unit_name,
-            fmn_id: item.fmn_id,
+            fmn_id: effectiveFmnId,
           },
           { transaction }
         );
       }
 
-      // 2. Update existing units' formations
+      // 3. Update existing units' formations
       for (const item of toUpdate) {
+        let effectiveFmnId = item.fmn_id;
+        if (!effectiveFmnId && item.target_formation_name && item.target_formation_name !== "Unassigned") {
+          const resolvedId = resolvedFormationMap[item.target_formation_name.toLowerCase().trim()];
+          if (resolvedId) {
+            effectiveFmnId = resolvedId;
+          }
+        }
+
         await db.ArmyUnit.update(
-          { fmn_id: item.fmn_id },
+          { fmn_id: effectiveFmnId },
           { where: { id: item.id }, transaction }
         );
       }
@@ -831,11 +884,14 @@ exports.bulkUploadUnits = async (req, res) => {
         {
           needConfirmation: false,
           totalRows: jsonData.length,
+          createdFormationsCount: formationsToCreate.length,
           insertedCount: toCreate.length,
           updatedCount: toUpdate.length,
           unchangedCount: unchanged.length,
         },
         `Army units processed successfully.${
+          formationsToCreate.length > 0 ? ` ${formationsToCreate.length} formation(s) created.` : ""
+        }${
           toCreate.length > 0 ? ` ${toCreate.length} created.` : ""
         }${toUpdate.length > 0 ? ` ${toUpdate.length} updated.` : ""}`
       );

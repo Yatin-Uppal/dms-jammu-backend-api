@@ -150,7 +150,7 @@ exports.excelImportData = async (req, res) => {
       );
     }
 
-    // 7. Check if all formations in the sheet exist in DB
+    // 7. Check formations in the sheet against DB
     const allDbFormations = await db.formations.findAll({
       where: {
         [Op.or]: [
@@ -164,45 +164,6 @@ exports.excelImportData = async (req, res) => {
     allDbFormations.forEach((f) => {
       formationMapByName.set(f.formation_name.toLowerCase().trim(), f);
     });
-
-    const invalidFormations = [];
-    const seenFormationErrors = new Set();
-
-    for (let index = 0; index < jsonData.length; index++) {
-      const row = jsonData[index];
-      const rowNumber = index + 2;
-      const fmnName = String(row["Fmn"] || row["fmn"] || row["Formation"]).trim();
-      const unitName = String(row["Unit"] || row["unit"] || row["Unit Name"]).trim();
-
-      if (!formationMapByName.has(fmnName.toLowerCase())) {
-        if (!seenFormationErrors.has(fmnName.toLowerCase())) {
-          seenFormationErrors.add(fmnName.toLowerCase());
-          invalidFormations.push({
-            row: rowNumber,
-            unit_name: unitName,
-            formation_name: fmnName,
-            error: `Formation '${fmnName}' does not exist in the system.`,
-          });
-        }
-      }
-    }
-
-    if (invalidFormations.length > 0) {
-      return responseHandler(
-        req,
-        res,
-        400,
-        false,
-        "One or more formations specified in the Excel sheet do not exist. Please create them before importing.",
-        {
-          errorType: "INVALID_FORMATIONS",
-          totalRows: jsonData.length,
-          invalidFormations,
-          formations: invalidFormations.map((item) => item.formation_name),
-        },
-        "Invalid formations"
-      );
-    }
 
     // 8. Intra-file conflicting unit assignments check
     // Ensure the same unit name is not mapped to multiple different formations in the same Excel file
@@ -253,6 +214,21 @@ exports.excelImportData = async (req, res) => {
       );
     }
 
+    // Identify unique formations to create
+    const formationsToCreateMap = new Map();
+    for (const fileUnit of fileUnitFormationMap.values()) {
+      const fmnKey = fileUnit.formation_name.toLowerCase();
+      if (!formationMapByName.has(fmnKey) && !formationsToCreateMap.has(fmnKey)) {
+        formationsToCreateMap.set(fmnKey, {
+          formation_name: fileUnit.formation_name,
+          rowNumber: fileUnit.row,
+          action: "create_formation",
+          action_label: "Create Formation",
+        });
+      }
+    }
+    const formationsToCreate = Array.from(formationsToCreateMap.values());
+
     // 9. Check Unit-Formation Relationships against DB
     const uniqueUnitNames = Array.from(fileUnitFormationMap.values()).map(
       (item) => item.unit_name
@@ -292,6 +268,7 @@ exports.excelImportData = async (req, res) => {
       const targetFmnName = targetFormation
         ? targetFormation.formation_name
         : fileUnit.formation_name;
+      const isNewFormation = !targetFormation;
 
       const existingUnit = existingDbUnitMap.get(
         fileUnit.unit_name.toLowerCase()
@@ -304,8 +281,9 @@ exports.excelImportData = async (req, res) => {
           current_formation_name: "None (New Unit)",
           target_formation_name: targetFmnName,
           fmn_id: targetFmnId,
+          is_new_formation: isNewFormation,
           action: "create",
-          action_label: "Create New Unit",
+          action_label: isNewFormation ? "Create Unit & Formation" : "Create New Unit",
           rowNumber: fileUnit.row,
         });
       } else {
@@ -314,7 +292,7 @@ exports.excelImportData = async (req, res) => {
           ? existingUnit.formationData.formation_name
           : "Unassigned";
 
-        if (currentFmnId === targetFmnId) {
+        if (targetFmnId && currentFmnId === targetFmnId) {
           unchanged.push({
             id: existingUnit.id,
             unit_name: fileUnit.unit_name,
@@ -326,11 +304,12 @@ exports.excelImportData = async (req, res) => {
             rowNumber: fileUnit.row,
           });
         } else {
-          // Unit exists in DB, but currently has different formation (or is unassigned)
+          // Unit exists in DB, but currently has different formation (or is unassigned, or target formation is brand new)
           const isUnassigned = currentFmnId === null || currentFmnId === undefined;
-          const actionLabel = isUnassigned
-            ? "Assign Formation"
-            : "Update Formation";
+          let actionLabel = isUnassigned ? "Assign Formation" : "Update Formation";
+          if (isNewFormation) {
+            actionLabel = isUnassigned ? "Assign New Formation" : "Update to New Formation";
+          }
 
           toUpdate.push({
             id: existingUnit.id,
@@ -338,6 +317,7 @@ exports.excelImportData = async (req, res) => {
             current_formation_name: currentFmnName,
             target_formation_name: targetFmnName,
             fmn_id: targetFmnId,
+            is_new_formation: isNewFormation,
             action: "update",
             action_label: actionLabel,
             is_mismatch: !isUnassigned,
@@ -347,8 +327,11 @@ exports.excelImportData = async (req, res) => {
       }
     }
 
-    // 10. If there are new units or formation updates and user hasn't confirmed yet:
-    if ((toCreate.length > 0 || toUpdate.length > 0) && !isConfirmed) {
+    // 10. If there are new formations, new units, or formation updates and user hasn't confirmed yet:
+    if (
+      (formationsToCreate.length > 0 || toCreate.length > 0 || toUpdate.length > 0) &&
+      !isConfirmed
+    ) {
       return responseHandler(
         req,
         res,
@@ -358,6 +341,8 @@ exports.excelImportData = async (req, res) => {
         {
           needConfirmation: true,
           totalRows: jsonData.length,
+          formationsToCreateCount: formationsToCreate.length,
+          formationsToCreate,
           toCreateCount: toCreate.length,
           toUpdateCount: toUpdate.length,
           unchangedCount: unchanged.length,
@@ -388,8 +373,49 @@ exports.excelImportData = async (req, res) => {
     // 12. Execution inside a DB Transaction
     const transaction = await db.sequelize.transaction();
     try {
+      // 12a. Create or reactivate missing formations
+      const resolvedFormationMap = new Map(formationMapByName);
+      for (const fmn of formationsToCreate) {
+        const existingDeletedFmn = await db.formations.findOne({
+          where: {
+            formation_name: fmn.formation_name,
+            is_deleted: true,
+          },
+          transaction,
+        });
+
+        let fmnInstance;
+        if (existingDeletedFmn) {
+          await db.formations.update(
+            { is_deleted: false },
+            { where: { id: existingDeletedFmn.id }, transaction }
+          );
+          fmnInstance = existingDeletedFmn;
+        } else {
+          fmnInstance = await db.formations.create(
+            { formation_name: fmn.formation_name },
+            { transaction }
+          );
+        }
+
+        resolvedFormationMap.set(
+          fmn.formation_name.toLowerCase().trim(),
+          fmnInstance
+        );
+      }
+
       // Create new units in ArmyUnit table
       for (const item of toCreate) {
+        let effectiveFmnId = item.fmn_id;
+        if (!effectiveFmnId && item.target_formation_name) {
+          const resolved = resolvedFormationMap.get(
+            item.target_formation_name.toLowerCase().trim()
+          );
+          if (resolved) {
+            effectiveFmnId = resolved.id;
+          }
+        }
+
         await db.ArmyUnit.destroy({
           where: { unit_name: item.unit_name, is_deleted: true },
           force: true,
@@ -399,7 +425,7 @@ exports.excelImportData = async (req, res) => {
         await db.ArmyUnit.create(
           {
             unit_name: item.unit_name,
-            fmn_id: item.fmn_id,
+            fmn_id: effectiveFmnId,
           },
           { transaction }
         );
@@ -407,8 +433,18 @@ exports.excelImportData = async (req, res) => {
 
       // Update existing units in ArmyUnit table
       for (const item of toUpdate) {
+        let effectiveFmnId = item.fmn_id;
+        if (!effectiveFmnId && item.target_formation_name) {
+          const resolved = resolvedFormationMap.get(
+            item.target_formation_name.toLowerCase().trim()
+          );
+          if (resolved) {
+            effectiveFmnId = resolved.id;
+          }
+        }
+
         await db.ArmyUnit.update(
-          { fmn_id: item.fmn_id },
+          { fmn_id: effectiveFmnId },
           { where: { id: item.id }, transaction }
         );
       }
@@ -427,6 +463,7 @@ exports.excelImportData = async (req, res) => {
         "",
         {
           totalRows: jsonData.length,
+          createdFormationsCount: formationsToCreate.length,
           createdUnitsCount: toCreate.length,
           updatedUnitsCount: toUpdate.length,
           unchangedUnitsCount: unchanged.length,
