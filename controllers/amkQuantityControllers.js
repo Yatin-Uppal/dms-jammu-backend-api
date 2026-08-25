@@ -685,7 +685,7 @@ exports.getAmkLotDetails = async (req, res) => {
         total_quantity: amk.total_quantity,
         assigned_quantity: assignedQuantity.toFixed(2),
         loaded_quantity: loadedQuantity.toFixed(2),
-        balance_quantity: (Number(amk.total_quantity) - assignedQuantity - loadedQuantity).toFixed(2),
+        balance_quantity: (Number(amk.total_quantity) - assignedQuantity).toFixed(2),
         actual_quantity: (Number(amk.total_quantity) - loadedQuantity).toFixed(2),
         ...((location && amk_number) || isAssigning) && { amkLotDetails },
       };

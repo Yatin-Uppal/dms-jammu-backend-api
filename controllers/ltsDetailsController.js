@@ -198,8 +198,6 @@ exports.createLTS = async (req, res) => {
 // to get lts data by id
 exports.getLTSDetailsById = async (req, res) => {
   try {
-    console.log(req.params.ltsId, "LTS ID");
-    
     const lts = await db.LtsDetail.findOne({
       where: {
         id: req.params.ltsId,

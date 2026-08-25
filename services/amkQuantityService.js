@@ -74,7 +74,7 @@ async function processResultData(amkAssignedData, amkQuantityData) {
       total_quantity,
       assigned_quantity: (calculatedQuantity.totalAssignedQuantity || 0).toFixed(2),
       loaded_quantity: (calculatedQuantity.totalLoadedQuantity || 0).toFixed(2),
-      balance_quantity: (total_quantity - (calculatedQuantity.totalAssignedQuantity || 0) - (calculatedQuantity.totalLoadedQuantity || 0)).toFixed(2),
+      balance_quantity: (total_quantity - (calculatedQuantity.totalAssignedQuantity || 0)).toFixed(2),
       actual_quantity: (total_quantity - (calculatedQuantity.totalLoadedQuantity || 0)).toFixed(2),
     };
   });
