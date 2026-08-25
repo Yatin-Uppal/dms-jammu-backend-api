@@ -36,8 +36,8 @@ exports.getLtsDataForDriverNotLoaded = async (lts_id) => {
       ltsNo: lts.name,
       type: lts.type,
       lts_date_and_time: lts.lts_date_and_time,
-      formation_name: lts.formationData.formation_name,
-      fmn_id: lts.formationData.id,
+      formation_name: lts?.formationData?.formation_name || "",
+      fmn_id: lts?.formationData?.id || lts?.fmn_id || null,
       skts: sktDataWithVarieties,
     };
 

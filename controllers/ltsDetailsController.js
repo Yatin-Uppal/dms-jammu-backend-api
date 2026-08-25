@@ -198,6 +198,8 @@ exports.createLTS = async (req, res) => {
 // to get lts data by id
 exports.getLTSDetailsById = async (req, res) => {
   try {
+    console.log(req.params.ltsId, "LTS ID");
+    
     const lts = await db.LtsDetail.findOne({
       where: {
         id: req.params.ltsId,
@@ -274,8 +276,8 @@ exports.getLTSDetailsById = async (req, res) => {
       ltsNo: lts.name,
       type: lts.type,
       lts_date_and_time: lts.lts_date_and_time,
-      formation_name: lts?.formationData?.formation_name,
-      fmn_id: lts.formationData.id,
+      formation_name: lts?.formationData?.formation_name || "",
+      fmn_id: lts?.formationData?.id || lts?.fmn_id || null,
       skts: sktDataWithVarieties,
       created_by: lts.createdBy,
       updated_by: lts.updatedBy,
@@ -651,7 +653,7 @@ exports.getLTSDetailsGrouped = async (req, res) => {
           lts_name: lts.name,
           type: lts.type,
           lts_date_and_time: lts.lts_date_and_time,
-          formation_name: lts.formationData.formation_name,
+          formation_name: lts?.formationData?.formation_name || "",
           skts: sktDataWithVarieties,
         };
       })
