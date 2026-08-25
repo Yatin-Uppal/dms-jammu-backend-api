@@ -71,11 +71,14 @@ app.use("/api", seriesRoutes);
 app.use("/api", armyUnitRoutes);
 
 const ipAddress = process.env.SERVER_IP || getLocalIP();
+const serverAp = process.env.SERVER_AP || "AP 253";
+process.env.SERVER_AP = serverAp;
+
 (async () => {
   await db.initialize();
   await db.sequelize.sync();
 
   app.listen(PORT, ipAddress, () =>
-    console.log(`Server running on http://${ipAddress}:${PORT}`)
+    console.log(`Server running on http://${ipAddress}:${PORT} [AP: ${serverAp}]`)
   );
 })();

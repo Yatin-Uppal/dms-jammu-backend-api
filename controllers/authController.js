@@ -15,8 +15,21 @@ exports.login = async (req, res) => {
     }, "");
   }
 
-  const { username, password } = req.body;
+  const { username, password, ap } = req.body;
   try {
+    const serverAp = process.env.SERVER_AP || "AP 251";
+    if (ap !== serverAp) {
+      return responseHandler(
+        req,
+        res,
+        401,
+        false,
+        "Invalid Ammunition Point (AP) selected",
+        {},
+        ""
+      );
+    }
+
     const user = await db.User.findOne({
       where: { username,password }
     });
@@ -26,19 +39,20 @@ exports.login = async (req, res) => {
     if (user.is_blocked) {
       return responseHandler(req,res, 401, false, "Access Denied, contact DCC Admin.", {}, "");
     }
-    
+
     const role = await db.Role.findOne({ where: { id: user.role_id } });
 
     responseHandler(req,res, 200, true, "", {
-      user_id: user.id,
-      roleData: {
-        id: role.id,
-        role: role.role,
-      },
-      first_name: user.first_name,
-      last_name: user.last_name,
-      username: user.username,
-    }, "Login Successful.");
+        user_id: user.id,
+        roleData: {
+          id: role.id,
+          role: role.role,
+        },
+        first_name: user.first_name,
+        last_name: user.last_name,
+        username: user.username,
+        ap: serverAp,
+      }, "Login Successful.");
   } catch (error) {
     responseHandler(req,res, 500, false, "Server error", {}, "");
   }
