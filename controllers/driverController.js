@@ -470,8 +470,8 @@ exports.downloadExcel = async (req, res) => {
       "ID Card Number/ Adhar number/ DC Number",
       "Resource",
       "Title",
-      "Unit",
       "FMN",
+      "Unit",
       "Vehicle Number / BA Number",
       "Vehicle Type",
       "Vehicle Capacity",
@@ -537,8 +537,8 @@ exports.downloadExcel = async (req, res) => {
         record.id_card_number_adhar_number_dc_number || "",
         record.resource || "",
         record.title || "",
-        record.unit || "",
         record.formation_details?.formation_name || "",
+        record.unit || "",
         record.vehicle_number_ba_number || "",
         record.vehicleType ? record.vehicleType.vehicle_type : "",
         record.vehicle_capacity || "",
@@ -722,8 +722,8 @@ exports.downloadAmkreport = async (req, res) => {
       "AMN Shelf Life",
       "Qty",
       "Total Tonnage",
-      "Unit",
       "Formation",
+      "Unit",
     ];
 
     // Set column widths based on the header length
@@ -757,7 +757,7 @@ exports.downloadAmkreport = async (req, res) => {
         totalTonnage = 0;
       }
 
-      data.push([amkNumber, nomenclature, amnShelfLife, qty, tonnage, unit, formation]);
+      data.push([amkNumber, nomenclature, amnShelfLife, qty, tonnage, formation, unit]);
       totalTonnage += parseFloat(tonnage) || 0;
 
       previousAMK = amkNumber;
