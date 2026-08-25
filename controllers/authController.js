@@ -15,20 +15,9 @@ exports.login = async (req, res) => {
     }, "");
   }
 
-  const { username, password, ap } = req.body;
+  const { username, password } = req.body;
   try {
     const serverAp = process.env.SERVER_AP || "AP 251";
-    if (ap !== serverAp) {
-      return responseHandler(
-        req,
-        res,
-        401,
-        false,
-        "Invalid Ammunition Point (AP) selected",
-        {},
-        ""
-      );
-    }
 
     const user = await db.User.findOne({
       where: { username,password }
