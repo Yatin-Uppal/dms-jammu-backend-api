@@ -327,9 +327,77 @@ exports.excelImportData = async (req, res) => {
       }
     }
 
-    // 10. If there are new formations, new units, or formation updates and user hasn't confirmed yet:
+    // 10. Check package number formula discrepancies (Pkg Nos != Total Available Quantity in Store / IPQ)
+    const allAmkQuantities = await db.ManageAmkQuantity.findAll({
+      where: {
+        [Op.or]: [
+          { is_deleted: { [Op.is]: null } },
+          { is_deleted: false },
+        ],
+      },
+    });
+
+    const amkStoreQtyMap = new Map();
+    for (const amk of allAmkQuantities) {
+      const key = `${(amk.location || "").toLowerCase().trim()}__${(amk.amk_number || "").toLowerCase().trim()}`;
+      amkStoreQtyMap.set(key, Number(amk.total_quantity || 0));
+    }
+
+    const pkgNosDiscrepancies = [];
+    for (let index = 0; index < jsonData.length; index++) {
+      const row = jsonData[index];
+      const rowNumber = index + 2;
+      const locationCount = Object.keys(row).filter((key) =>
+        key.includes("Location")
+      ).length;
+
+      for (let i = 0; i <= locationCount; i++) {
+        const sktLocation = row[`${i + 1}.Location`];
+        if (!sktLocation) continue;
+
+        const varietyCount = Object.keys(row).filter((key) =>
+          key.startsWith(`${i + 1}.AMK No.`)
+        ).length;
+
+        for (let j = 1; j <= varietyCount; j++) {
+          const ext = "_" + j;
+          const amkNo = row[`${i + 1}.AMK No.` + ext];
+          const qtyRaw = row[`${i + 1}.Qty Given Nos.` + ext];
+          const ipqRaw = row[`${i + 1}.IPQ` + ext];
+          const pkgNosRaw = row[`${i + 1}.Pkg Nos` + ext];
+
+          if (amkNo && ipqRaw !== undefined) {
+            const ipqNum = Number(ipqRaw);
+            const qtyNum = Number(qtyRaw || 0);
+            const excelPkgNos = pkgNosRaw !== undefined && pkgNosRaw !== null && pkgNosRaw !== "" ? Number(pkgNosRaw) : null;
+            
+            const amkKey = `${String(sktLocation).toLowerCase().trim()}__${String(amkNo).toLowerCase().trim()}`;
+            const totalStoreQty = amkStoreQtyMap.has(amkKey) ? amkStoreQtyMap.get(amkKey) : qtyNum;
+
+            if (ipqNum > 0 && totalStoreQty > 0) {
+              const expectedPkgNos = Math.ceil(totalStoreQty / ipqNum);
+              if (excelPkgNos === null || Math.abs(excelPkgNos - expectedPkgNos) > 0.001) {
+                pkgNosDiscrepancies.push({
+                  row: rowNumber,
+                  location: sktLocation,
+                  amk_number: String(amkNo).trim(),
+                  total_store_qty: totalStoreQty,
+                  qty_given: qtyNum,
+                  ipq: ipqNum,
+                  excel_pkg_nos: excelPkgNos !== null ? excelPkgNos : "Empty",
+                  expected_pkg_nos: expectedPkgNos,
+                  issue: `Total available in store (${totalStoreQty}) / IPQ (${ipqNum}) = ${expectedPkgNos} packages, but Excel has ${excelPkgNos !== null ? excelPkgNos : "empty"}.`,
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 11. If there are new formations, new units, formation updates, or package number discrepancies and user hasn't confirmed yet:
     if (
-      (formationsToCreate.length > 0 || toCreate.length > 0 || toUpdate.length > 0) &&
+      (formationsToCreate.length > 0 || toCreate.length > 0 || toUpdate.length > 0 || pkgNosDiscrepancies.length > 0) &&
       !isConfirmed
     ) {
       return responseHandler(
@@ -349,11 +417,12 @@ exports.excelImportData = async (req, res) => {
           toCreate,
           toUpdate,
           unchanged,
+          pkgNosDiscrepanciesCount: pkgNosDiscrepancies.length,
+          pkgNosDiscrepancies,
         },
-        "Formation & unit discrepancies found. Confirmation required before importing."
+        "Discrepancies found in units, formations, or package calculations. Confirmation required before importing."
       );
     }
-
     // 11. Prepare AMK Data & FIFO Lot Allocations
     const transformedData = await transformData(jsonData);
     const validatedData = await validatedAmkQuantities(transformedData);
@@ -447,6 +516,24 @@ exports.excelImportData = async (req, res) => {
           { fmn_id: effectiveFmnId },
           { where: { id: item.id }, transaction }
         );
+      }
+
+      // Update validatedData with resolved formation IDs for driver vehicles and LTS
+      for (let i = 0; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        const fmnRaw = row["Fmn"] || row["fmn"] || row["Formation"];
+        if (fmnRaw && validatedData[i]) {
+          const fmnKey = String(fmnRaw).toLowerCase().trim();
+          const resolvedFmn = resolvedFormationMap.get(fmnKey);
+          if (resolvedFmn) {
+            validatedData[i].fmn_id = resolvedFmn.id;
+            if (validatedData[i].ltsData && validatedData[i].ltsData.length > 0) {
+              for (const ltsItem of validatedData[i].ltsData) {
+                ltsItem.fmn_id = resolvedFmn.id;
+              }
+            }
+          }
+        }
       }
 
       const userId = req.headers.user_id;

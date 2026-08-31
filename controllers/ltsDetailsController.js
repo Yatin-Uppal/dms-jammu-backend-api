@@ -575,6 +575,33 @@ exports.updateLTS = async (req, res) => {
       sktData.push(newSkt);
     }
 
+    // If LTS is assigned to a driver vehicle, sync driver_vehicle_id on new VarietyLoadDetails
+    const activeAssignment = await db.AssignedLtsDetail.findOne({
+      where: {
+        lts_issue_voucher_detail_id: req.params.lts_Id,
+        [db.Sequelize.Op.or]: [
+          { is_deleted: { [db.Sequelize.Op.is]: null } },
+          { is_deleted: false },
+        ],
+      },
+    });
+
+    if (activeAssignment && activeAssignment.driver_vehicle_detail_id) {
+      const allNewSktVarieties = await db.SktVarieties.findAll({
+        attributes: ["id"],
+        where: {
+          skt_id: sktData.map((skt) => skt.id),
+        },
+      });
+      const newSktVarietyIds = allNewSktVarieties.map((sv) => sv.id);
+      if (newSktVarietyIds.length > 0) {
+        await db.VarietyLoadDetails.update(
+          { driver_vehicle_id: activeAssignment.driver_vehicle_detail_id },
+          { where: { skt_variety_id: newSktVarietyIds } }
+        );
+      }
+    }
+
     // Update LTS details
     lts = await lts.update({
       name: ltsNo,

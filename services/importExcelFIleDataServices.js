@@ -93,9 +93,9 @@ exports.transformData = async (jsonData) => {
         row["I-Card No/Adhar No/DL No"] ||
         row["I-Card No/Adhar No/DL No "] ||
         null,
-      unit: row["Unit"] || null,
+      unit: row["Unit"] || row["unit"] || row["Unit Name"] || null,
       series: row["Series"] || null,
-      fmn_id: row["Fmn"] ? await getFormationID(row["Fmn"]) : null,
+      fmn_id: (row["Fmn"] || row["fmn"] || row["Formation"]) ? await getFormationID(row["Fmn"] || row["fmn"] || row["Formation"]) : null,
       created_at: row["GateIn"] ? row["GateIn"] : null,
       ltsData: [
         {
@@ -104,7 +104,7 @@ exports.transformData = async (jsonData) => {
           lts_date_and_time: row["LTS Date and Time"]
             ? new Date(row["LTS Date and Time"])
             : new Date(),
-          fmn_id: row["Fmn"] ? await getFormationID(row["Fmn"]) : null,
+          fmn_id: (row["Fmn"] || row["fmn"] || row["Formation"]) ? await getFormationID(row["Fmn"] || row["fmn"] || row["Formation"]) : null,
           skts: [],
         },
       ],
@@ -235,6 +235,12 @@ exports.storeBulkDriverData = async (bulkDriverData, userId, externalTransaction
               amn_shelf_life = amkQuantityRecord ? amkQuantityRecord.amn_shelf_life : null;
             }
 
+            const totalStoreQuantity = amkQuantityRecord ? Number(amkQuantityRecord.total_quantity || 0) : Number(variety.qty || 0);
+            const ipqNum = Number(variety.ipq);
+            const calculatedPkgNos = (ipqNum > 0 && totalStoreQuantity > 0)
+              ? Math.ceil(totalStoreQuantity / ipqNum)
+              : (String(variety.number_of_package).includes('.') ? Math.ceil(Number(variety.number_of_package)) : (variety.number_of_package || null));
+
             const newVariety = await db.VarietyDetail.create(
               {
                 amk_number: variety.amk_number || null,
@@ -243,7 +249,7 @@ exports.storeBulkDriverData = async (bulkDriverData, userId, externalTransaction
                 ipq: variety.ipq || null,
                 package_weight: variety.package_weight || null,
                 qty: variety.qty || null,
-                number_of_package: String(variety.number_of_package).includes('.') ? Math.ceil(Number(variety.number_of_package)) : variety.number_of_package || null,
+                number_of_package: calculatedPkgNos,
                 location_33_fad: variety.location_33_fad || null,
                 fad_loading_point_lp_number:
                   variety.fad_loading_point_lp_number || null,
