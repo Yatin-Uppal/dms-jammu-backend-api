@@ -33,13 +33,6 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: "ManageAmkQuantity",
       tableName: "amk_quantities", // Specify the actual table name here
-      indexes: [
-        {
-          unique: true,
-          fields: ["amk_number", "location", "is_deleted"],
-          name: "unique_amk_number",
-        },
-      ],
       createdAt: "created_at", // Specify the createdAt field name
       updatedAt: "updated_at", // Specify the updatedAt field name
       paranoid: true, // Enable soft deletes
