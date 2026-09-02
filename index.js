@@ -25,6 +25,7 @@ const logRoutes = require("./routes/logRoutes");
 const amkQuantityRoutes = require("./routes/amkQuantityRoutes");
 const seriesRoutes = require("./routes/seriesRouter");
 const armyUnitRoutes = require("./routes/armyUnitRoutes");
+const exportSyncRoutes = require("./routes/exportSyncRoutes");
 
 const PORT = process.env.PORT || 8080;
 
@@ -69,6 +70,7 @@ app.use("/api", checkConnectionRoutes);
 app.use("/api", amkQuantityRoutes);
 app.use("/api", seriesRoutes);
 app.use("/api", armyUnitRoutes);
+app.use("/api", exportSyncRoutes);
 
 const ipAddress = process.env.SERVER_IP || getLocalIP();
 const serverAp = process.env.SERVER_AP || "AP 253";

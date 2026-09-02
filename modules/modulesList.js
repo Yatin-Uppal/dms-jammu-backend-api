@@ -90,3 +90,9 @@ exports.manage_army_units_api = [
   "/api/unit/:unit_id",
   "/api/unit/bulk-upload"
 ];
+
+exports.export_sync_api = [
+  "/api/export/locations",
+  "/api/export/data-sync",
+  "/api/export/sync-history"
+];

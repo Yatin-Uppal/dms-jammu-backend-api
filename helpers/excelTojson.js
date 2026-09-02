@@ -19,6 +19,7 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
             groupedDataMap.set(key, {
                 amk: row.amk,
                 amn_shelf_life: row.amn_shelf_life,
+                nomenclature: row.nomenclature,
                 loc: row.loc,
                 total_quantity: 0,
                 lot_details: [],
@@ -26,6 +27,9 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
             });
         }
         const group = groupedDataMap.get(key);
+        if (!group.nomenclature && row.nomenclature) {
+            group.nomenclature = row.nomenclature;
+        }
         const qty_bal = Number(row.qty_bal) || 0;
         group.total_quantity += qty_bal;
         group.lot_details.push({
@@ -62,7 +66,8 @@ async function processRecordsInBatches(data, excelFileRecord, db, batchSize = 50
                         location: record.loc,
                         total_quantity: record.total_quantity,
                         sheet_id: record.sheet_id,
-                        amn_shelf_life: record.amn_shelf_life
+                        amn_shelf_life: record.amn_shelf_life,
+                        ...(record.nomenclature && { nomenclature: record.nomenclature })
                     };
 
                     // Find or create record based on amk_number AND location

@@ -27,4 +27,8 @@ exports.modules_actual_name = [
     function_name: "manage_army_units_api",
     module_name: "Manage Army Units",
   },
+  {
+    function_name: "export_sync_api",
+    module_name: "Export Sync",
+  },
 ];
