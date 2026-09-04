@@ -59,6 +59,8 @@ exports.handleDriverVehicleDetailsSave = async (driver_id) => {
 exports.fetchDriverRecords = async (whereCondition, whereForAssignLts, limitInt, offset) => {
   // Fetch data based on query parameters
   const driverData = await db.DriverVehicleDetail.findAndCountAll({
+    distinct: true,
+    col: "id",
     ...(whereCondition && { where: whereCondition }),
     ...(limitInt && { limit: limitInt }),
     ...(offset && { offset: offset }),
