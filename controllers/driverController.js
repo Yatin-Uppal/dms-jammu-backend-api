@@ -372,26 +372,14 @@ exports.fetchRecords = async (req, res) => {
       offset
     );
 
-    if (!driversResult || driversResult.length <= 0) {
-      return responseHandler(
-        req,
-        res,
-        400,
-        false,
-        "Driver data not found",
-        {},
-        ""
-      );
-    }
-
-    const totalPages = Math.ceil(count / limit);
+    const totalPages = Math.ceil(count / limitInt) || 1;
 
     const modifiedDriverData = {
-      total_records: count,
+      total_records: count || 0,
       limit: limitInt,
       page: pageInt,
       total_pages: totalPages,
-      records: driversResult,
+      records: driversResult || [],
     };
 
     responseHandler(
@@ -401,7 +389,9 @@ exports.fetchRecords = async (req, res) => {
       true,
       "",
       modifiedDriverData,
-      "Driver data fetched successfully!"
+      driversResult && driversResult.length > 0
+        ? "Driver data fetched successfully!"
+        : "No records found"
     );
   } catch (error) {
     responseHandler(req, res, 500, false, "Server error", { error }, "");

@@ -6,4 +6,4 @@ package-lock.json
 
 /uploads
 
-.env
+config.bat
