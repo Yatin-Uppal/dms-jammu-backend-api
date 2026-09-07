@@ -732,8 +732,8 @@ exports.downloadAmkreport = async (req, res) => {
       const amkNumber = record["AMK NUMBER"] || "";
       const nomenclature = record["NOMENCLATURE"] || "";
       const amnShelfLife = record["AMN SHELF LIFE"] || "";
-      const qty = record["QUANTITY"] || "";
-      const tonnage = record["TONNAGE"] || "";
+      const qty = record["QUANTITY"] !== undefined && record["QUANTITY"] !== null ? record["QUANTITY"] : 0;
+      const tonnage = record["TONNAGE"] !== undefined && record["TONNAGE"] !== null ? record["TONNAGE"] : 0;
       const unit = record["UNIT"] || "";
       const formation = record["FORMATION"] || "";
 
